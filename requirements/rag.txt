@@ -1,0 +1,9 @@
+-r base.txt
+sentence-transformers>=3.0
+faiss-cpu>=1.8
+chromadb>=0.5
+biopython>=1.83
+lxml>=5.2
+langchain>=0.3
+langchain-community>=0.3
+tqdm>=4.66

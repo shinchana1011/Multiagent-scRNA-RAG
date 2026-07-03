@@ -1,0 +1,7 @@
+-r base.txt
+fastapi>=0.115
+uvicorn[standard]>=0.30
+streamlit>=1.38
+python-multipart>=0.0.9
+reportlab>=4.2
+jinja2>=3.1

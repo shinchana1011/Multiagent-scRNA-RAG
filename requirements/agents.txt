@@ -1,0 +1,6 @@
+-r base.txt
+langgraph>=0.2
+langchain>=0.3
+langchain-anthropic>=0.2
+langchain-openai>=0.2
+rpy2>=3.5

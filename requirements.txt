@@ -1,0 +1,5 @@
+-r requirements/pipeline.txt
+-r requirements/rag.txt
+-r requirements/agents.txt
+-r requirements/app.txt
+-r requirements/dev.txt
