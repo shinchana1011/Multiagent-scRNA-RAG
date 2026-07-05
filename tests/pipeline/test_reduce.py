@@ -1,7 +1,7 @@
 import numpy as np
 from anndata import AnnData
 from src.pipeline.normalize import normalize, select_hvg, scale
-from src.pipeline.reduce import run_pca, integrate_harmony, compute_neighbors
+from src.pipeline.reduce import run_pca, run_harmony, build_neighbors
 
 def _prepped(batches=None):
     rng = np.random.default_rng(0)
@@ -19,18 +19,18 @@ def test_pca_writes_embedding():
 
 def test_harmony_corrects_multi_batch():
     a = run_pca(_prepped(batches=["A", "B"]), n_comps=10)
-    a = integrate_harmony(a, batch_key="patient")
+    a = run_harmony(a, "patient")
     assert "X_pca_harmony" in a.obsm
     assert "X_pca" in a.obsm            # uncorrected embedding preserved
 
-def test_harmony_skips_single_batch():
-    a = run_pca(_prepped(batches=["A"]), n_comps=10)
-    a = integrate_harmony(a, batch_key="patient")
-    assert "X_pca_harmony" not in a.obsm   # nothing to correct, no-op
-
-def test_neighbors_uses_harmony_when_present():
+def test_neighbors_uses_given_rep():
     a = run_pca(_prepped(batches=["A", "B"]), n_comps=10)
-    a = integrate_harmony(a, batch_key="patient")
-    a = compute_neighbors(a)
+    a = run_harmony(a, "patient")
+    a = build_neighbors(a, n_pcs=10, use_rep="X_pca_harmony")
     assert "distances" in a.obsp
     assert a.uns["neighbors"]["params"]["use_rep"] == "X_pca_harmony"
+
+def test_neighbors_defaults_to_plain_pca():
+    a = run_pca(_prepped(), n_comps=10)
+    a = build_neighbors(a, n_pcs=10)
+    assert a.uns["neighbors"]["params"]["use_rep"] == "X_pca"
