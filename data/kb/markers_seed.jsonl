@@ -1,0 +1,8 @@
+{"cell_type": "CD4 T cell", "tissue": "PBMC", "markers": ["IL7R", "CD3D", "CD3E", "CCR7"], "source": "PanglaoDB", "pmid": "30951143"}
+{"cell_type": "CD8 T cell", "tissue": "PBMC", "markers": ["CD8A", "CD8B", "CD3D", "GZMK"], "source": "PanglaoDB", "pmid": "30951143"}
+{"cell_type": "B cell", "tissue": "PBMC", "markers": ["MS4A1", "CD79A", "CD79B", "CD19"], "source": "PanglaoDB", "pmid": "30951143"}
+{"cell_type": "NK cell", "tissue": "PBMC", "markers": ["GNLY", "NKG7", "KLRD1", "NCAM1"], "source": "PanglaoDB", "pmid": "30951143"}
+{"cell_type": "CD14 Monocyte", "tissue": "PBMC", "markers": ["CD14", "LYZ", "S100A8", "S100A9"], "source": "CellMarker2.0", "pmid": "36300619"}
+{"cell_type": "FCGR3A Monocyte", "tissue": "PBMC", "markers": ["FCGR3A", "MS4A7", "CDKN1C"], "source": "CellMarker2.0", "pmid": "36300619"}
+{"cell_type": "Dendritic cell", "tissue": "PBMC", "markers": ["FCER1A", "CST3", "CLEC10A"], "source": "CellMarker2.0", "pmid": "36300619"}
+{"cell_type": "Platelet", "tissue": "PBMC", "markers": ["PPBP", "PF4", "ITGA2B"], "source": "CellMarker2.0", "pmid": "36300619"}
