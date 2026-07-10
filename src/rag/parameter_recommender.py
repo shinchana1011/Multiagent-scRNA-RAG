@@ -6,6 +6,7 @@ from loguru import logger
 
 from src.schemas.config import PipelineConfig     # the frozen Member 1 <-> 2 contract
 from src.rag.retriever import Retriever
+from src.rag.llm_extractor import extract_parameters_llm
 
 # --- regex heuristics: find the number tied to each parameter's keyword ---
 _MITO = re.compile(r"mitochondrial[^.]*?(\d+(?:\.\d+)?)\s*(?:to\s*(\d+(?:\.\d+)?)\s*)?percent", re.I)

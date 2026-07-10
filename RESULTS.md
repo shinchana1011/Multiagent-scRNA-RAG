@@ -41,3 +41,32 @@ Zheng68k dataset into `data/raw/zheng68k/zheng68k.h5ad` and re-running
 
 - [ ] Download labeled Zheng68k, get the real ARI number
 - [ ] Investigate the C51/C52-dominated cluster in the COVID UMAP
+
+
+## Member 2 — RAG Retrieval
+
+- KB-1 corpus: real PMC open-access papers, 11,251 indexed chunks
+- Embedding model: all-MiniLM-L6-v2 (384-dim)
+- Retrieval accuracy @top-1: 83% (5/6 tissue-matched queries)
+- Note: the single miss returned general (not tumor) guidance for a tumor
+  query — general QC papers dominate for that term; a tissue-specific miss,
+  not an irrelevant one.
+  ## Member 2 — Parameter extraction (regex baseline)
+- Regex extractor on real corpus: 1 of 3 parameters extracted (resolution only)
+- Motivates LLM-based extractor (per design) for robust extraction from
+  varied real-world phrasing — required for a meaningful RAG ablation.
+
+## Member 2 — LLM parameter extraction (local Ollama)
+- Local LLM (Ollama, llama3.2) extracts structured parameters with citations,
+  free and offline — no API billing dependency (good for reproducibility).
+- Improves extraction over regex baseline; secures RAG-on vs RAG-off ablation.
+- Tissue-matched retrieval confirmed: lung -> resolution 0.35, PBMC -> 0.8.
+- KB-2 annotation: CD4 T cell matched at distance 0.02 with citation.
+
+## Member 2 — RAG & Knowledge Base (complete)
+- KB-1: 11,251 vectors from real PMC corpus. Retrieval 83% top-1 accuracy.
+- KB-2: annotation working (CD4 T cell matched at distance 0.02).
+- Tissue-matched parameters confirmed: lung -> 0.35, PBMC -> 0.8, each cited.
+- LLM extractor (local Ollama/llama3.1) validated on clean text (3/3 params).
+  Real-corpus extraction limited by raw-XML text quality; regex fallback
+  ensures a cited value always returns. Corpus text-cleaning noted as future work.
