@@ -75,3 +75,10 @@ Zheng68k dataset into `data/raw/zheng68k/zheng68k.h5ad` and re-running
 
 - Detects out-of-range values and uncited claims; verified claims promoted to HIGH.
 - Adversarial detection rate: 5/5 (100%) bad claims caught (NFR-06 target: >=90%).
+
+## Member 3 — Multi-agent orchestration (complete)
+- 5 agents (Data, Parameter, Verifier, Analysis, Annotation) wired via LangGraph StateGraph.
+- Full pipeline runs autonomously from one run_pipeline() call.
+- Verifier promotes valid cited claims to HIGH (adversarial detection 100% in tests).
+- Consensus annotation: 6/8 HIGH confidence, 2 flagged to review queue (FR-16, FR-17).
+- SingleR (3rd method) stubbed pending R toolchain; 2-method consensus operational.

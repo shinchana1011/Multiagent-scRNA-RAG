@@ -53,6 +53,9 @@ class PipelineState:
     log: list[dict] = field(default_factory=list)
     error: Optional[str] = None
 
+    retry_count: dict[str, int] = field(default_factory=dict)   # per-agent retry tally
+    max_retries: int = 2
+
     def log_event(self, agent: str, action: str, detail: Any = None) -> None:
         self.log.append({"t": round(time.time(), 3), "agent": agent,
                          "action": action, "detail": detail})
