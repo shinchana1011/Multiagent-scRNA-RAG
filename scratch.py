@@ -1,14 +1,12 @@
-from src.schemas.state import PipelineState
-from src.agents.data_agent import DataAgent
-from src.agents.parameter_agent import ParameterAgent
-from src.agents.analysis_agent import AnalysisAgent
+from src.schemas.state import PipelineState, Claim
+from src.agents.verifier_agent import VerifierAgent
 
-state = PipelineState(input_path="data/raw/pbmc3k/pbmc3k_raw.h5ad", tissue="PBMC")
+state = PipelineState(input_path="x", tissue="PBMC")
+state.claims.append(Claim("resolution", 0.8, pmid="13328136"))   # good: sane + cited
+state.claims.append(Claim("resolution", 99.0, pmid="12345"))     # bad: out of range
+state.claims.append(Claim("mito_pct", 10.0, pmid=""))            # bad: no citation
 
-for agent in [DataAgent(), ParameterAgent(), AnalysisAgent()]:
-    state = agent.run(state)
-    ok = agent.validate(state)
-    print(f"{agent.agent_id:10} -> valid={ok}")
+VerifierAgent().run(state)
 
-print("\nclusters:", state.adata.obs["leiden"].nunique())
-print("claims:", [(c.parameter, c.value, c.pmid) for c in state.claims])
+for c in state.claims:
+    print(f"{c.parameter}={c.value:<6} verified={c.verified}  confidence={c.confidence}")

@@ -70,3 +70,8 @@ Zheng68k dataset into `data/raw/zheng68k/zheng68k.h5ad` and re-running
 - LLM extractor (local Ollama/llama3.1) validated on clean text (3/3 params).
   Real-corpus extraction limited by raw-XML text quality; regex fallback
   ensures a cited value always returns. Corpus text-cleaning noted as future work.
+
+  ## Member 3 — Verifier (three-check protocol)
+
+- Detects out-of-range values and uncited claims; verified claims promoted to HIGH.
+- Adversarial detection rate: 5/5 (100%) bad claims caught (NFR-06 target: >=90%).
