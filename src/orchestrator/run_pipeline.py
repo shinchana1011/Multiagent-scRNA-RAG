@@ -1,3 +1,4 @@
+# Orchestrates the complete workflow
 # src/orchestrator/run_pipeline.py — one-call entry point (Member 3, Task 6)
 from __future__ import annotations
 from src.schemas.state import PipelineState
