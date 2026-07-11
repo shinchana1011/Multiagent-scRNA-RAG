@@ -82,3 +82,7 @@ Zheng68k dataset into `data/raw/zheng68k/zheng68k.h5ad` and re-running
 - Verifier promotes valid cited claims to HIGH (adversarial detection 100% in tests).
 - Consensus annotation: 6/8 HIGH confidence, 2 flagged to review queue (FR-16, FR-17).
 - SingleR (3rd method) stubbed pending R toolchain; 2-method consensus operational.
+- 3 live annotation methods: marker-overlap, KB-2/RAG, SingleR (R via rpy2).
+- Label harmonization unifies vocabularies; consensus scores true 3/3 agreement.
+- On PBMC3k: 5/7 clusters HIGH confidence, 2 flagged to review queue.
+- LangGraph orchestration + retry loop (FR-25); Verifier 3-check (NFR-06 100%).
