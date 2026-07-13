@@ -24,23 +24,40 @@ class VerifierAgent(BaseAgent):
         return bool(claim.pmid)          # must carry a source
 
     def _check_context(self, claim, state) -> bool:
-        # placeholder: real version compares the cited paper's tissue to state.tissue.
-        # for now, accept (context data isn't stored on the claim yet).
-        return True
+        """Context check: the cited paper's tissue must match the dataset's
+        tissue, OR be 'general' guidance (which applies to any tissue)."""
+        claim_tissue = getattr(claim, "tissue", "general").lower()
+        data_tissue = state.tissue.lower()
+        return claim_tissue in (data_tissue, "general")
 
     def run(self, state: PipelineState) -> PipelineState:
+        from src.rag.parameter_recommender import retrieve_alternative
+        from src.schemas.state import Claim
+
         for claim in state.claims:
-            passed = (self._check_range(claim)
-                      and self._check_citation(claim)
-                      and self._check_context(claim, state))
-            if passed:
-                claim.verified = True
-                claim.confidence = "HIGH"
-            else:
-                claim.verified = False
+            tried_pmids = {claim.pmid}
+            attempts = 0
+            while attempts < 3:                       # cap re-retrieval attempts
+                passed = (self._check_range(claim)
+                          and self._check_citation(claim)
+                          and self._check_context(claim, state))
+                if passed:
+                    claim.verified = True
+                    claim.confidence = "HIGH"
+                    break
+                # FR-08: failed -> downgrade, then fetch an alternative source
                 claim.downgrade()
-                state.log_event(self.agent_id, "claim_failed",
-                                {"param": claim.parameter, "value": claim.value})
+                state.log_event(self.agent_id, "claim_failed_retrying",
+                                {"param": claim.parameter, "pmid": claim.pmid})
+                alt = retrieve_alternative(claim.parameter, state.tissue, tried_pmids)
+                if alt is None:
+                    break                             # no alternative in KB-1; stop
+                tried_pmids.add(alt["pmid"])
+                claim.value = alt["value"]            # swap in the alternative
+                claim.pmid = alt["pmid"]
+                claim.tissue = alt["tissue"]
+                attempts += 1
+
         n_verified = sum(c.verified for c in state.claims)
         state.log_event(self.agent_id, "verified",
                         {"passed": n_verified, "total": len(state.claims)})

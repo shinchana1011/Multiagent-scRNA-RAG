@@ -8,7 +8,6 @@ state = DataAgent().run(state)
 state = AnalysisAgent().run(state)
 state = AnnotationAgent().run(state)
 
-print(f"\n{'cluster':8}{'cell_type':14}{'conf':6}{'votes'}")
 for a in state.annotations:
-    print(f"{a.cluster_id:8}{a.cell_type:14}{a.confidence:6}{a.method_votes}")
-print("\nreview queue:", [a.cluster_id for a in state.review_queue()])
+    state_str = f" | state: {a.cell_state}" if a.cell_state else ""
+    print(f"cluster {a.cluster_id}: {a.cell_type:14} [{a.confidence}]{state_str}")

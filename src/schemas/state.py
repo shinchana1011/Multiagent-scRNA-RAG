@@ -15,6 +15,7 @@ class Claim:
     parameter: str
     value: Any
     pmid: str = ""
+    tissue: str = "general"   
     verified: bool = False
     confidence: str = "MED"          # HIGH / MED / LOW
 
@@ -31,6 +32,8 @@ class Annotation:
     cluster_id: str
     cell_type: str
     confidence: str                  # HIGH / MED / LOW
+    cell_state: str | None = None          # <-- ADD: FR-18 cell-state (HIGH clusters only)
+    sources: dict[str, str] = field(default_factory=dict)   # FR-19: {method: citation}
     marker_genes: list[str] = field(default_factory=list)
     method_votes: dict[str, str] = field(default_factory=dict)
 
@@ -62,3 +65,26 @@ class PipelineState:
 
     def review_queue(self) -> list[Annotation]:
         return [a for a in self.annotations if a.needs_review()]
+    
+    def export_audit(self, path: str = "data/processed/audit_trail.json") -> str:
+        """FR-26: persist the append-only audit trail to disk as JSON."""
+        import json, os
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        cfg = self.config
+        cfg_dict = cfg.model_dump() if hasattr(cfg, "model_dump") else vars(cfg)
+        payload = {
+            "input": self.input_path,
+            "tissue": self.tissue,
+            "config": cfg_dict,
+            "claims": [{"parameter": c.parameter, "value": c.value, "pmid": c.pmid,
+                        "verified": c.verified, "confidence": c.confidence}
+                       for c in self.claims],
+            "annotations": [{"cluster": a.cluster_id, "cell_type": a.cell_type,
+                             "confidence": a.confidence, "cell_state": a.cell_state,
+                             "sources": a.sources, "method_votes": a.method_votes}
+                            for a in self.annotations],
+            "log": self.log,
+        }
+        with open(path, "w", encoding="utf-8") as f:
+            json.dump(payload, f, indent=2, default=str)
+        return path

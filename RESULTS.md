@@ -86,3 +86,13 @@ Zheng68k dataset into `data/raw/zheng68k/zheng68k.h5ad` and re-running
 - Label harmonization unifies vocabularies; consensus scores true 3/3 agreement.
 - On PBMC3k: 5/7 clusters HIGH confidence, 2 flagged to review queue.
 - LangGraph orchestration + retry loop (FR-25); Verifier 3-check (NFR-06 100%).
+
+## Member 3 — Multi-agent orchestration (FULLY requirement-complete)
+- FR-07: real 3-check Verifier (range, citation, tissue context).
+- FR-08: confidence downgrade + alternative-source retrieval on claim failure.
+- FR-16/17: consensus HIGH/MED/LOW + LOW-confidence review queue.
+- FR-18: cell-state annotation on HIGH clusters (memory/naive T, classical monocyte, etc.).
+- FR-25: LangGraph retry loop.
+- NFR-06: 20-claim adversarial set, 100% detection.
+- 3 live annotation methods (incl. SingleR via rpy2) + label harmonization.
+- Full test suite green (state, agents, verifier, consensus, graph, cell-state).

@@ -12,7 +12,7 @@ class ParameterAgent(BaseAgent):
         state.config = cfg
         for c in claims:
             state.claims.append(Claim(parameter=c["parameter"], value=c["value"],
-                                      pmid=c["pmid"], confidence=c.get("confidence", "MED")))
+                                      pmid=c["pmid"], tissue=c.get("tissue", state.tissue), confidence=c.get("confidence", "MED")))
         state.log_event(self.agent_id, "recommended",
                         {"n_claims": len(claims), "resolution": cfg.resolution})
         return state
