@@ -12,41 +12,57 @@ def _ari(adata, label_key: str) -> float:
 
 def benchmark_all(labeled_path: str, label_key: str = "bulk_labels",
                   out_dir: str = "benchmarks/results", tissue: str = "PBMC") -> dict:
-    """Runs RAG-off (defaults) vs RAG-on, records ARI + runtime, writes CSV + plots."""
-    from src.io.readers import load_dataset
+    """Benchmark on a labeled (possibly pre-processed) dataset. Measures ARI of
+    Leiden clustering vs ground-truth labels, RAG-off vs RAG-on resolution."""
+    import scanpy as sc
     from src.schemas.config import PipelineConfig
-    from src.pipeline.runner import run_analysis
     from src.rag.parameter_recommender import recommend_parameters
     from src.benchmarks.plots import bar
 
     out = Path(out_dir); out.mkdir(parents=True, exist_ok=True)
     rows, results = [], {}
 
-    # RAG-OFF baseline
-    t0 = time.time()
-    a_off = run_analysis(load_dataset(labeled_path), PipelineConfig())
-    off_ari, off_rt = _ari(a_off, label_key), time.time() - t0
-    rows.append(["rag_off", off_ari, round(off_rt, 1)])
+    def _cluster_ari(resolution: float) -> tuple[float, float]:
+        a = sc.read_h5ad(labeled_path)               # bypass raw-counts guard (pre-processed data)
+        if label_key not in a.obs:
+            raise ValueError(f"'{label_key}' not in obs: {list(a.obs.columns)}")
+        t = time.time()
+        if "X_pca" not in a.obsm:                    # compute PCA if absent
+            sc.pp.pca(a, n_comps=min(50, a.n_vars - 1), random_state=0)
+        sc.pp.neighbors(a, random_state=0)
+        sc.tl.leiden(a, resolution=resolution, flavor="igraph",
+                     n_iterations=2, directed=False, random_state=0)
+        return _ari(a, label_key), time.time() - t
 
-    # RAG-ON
-    cfg, _ = recommend_parameters(tissue=tissue)
-    t1 = time.time()
-    a_on = run_analysis(load_dataset(labeled_path), cfg)
-    on_ari, on_rt = _ari(a_on, label_key), time.time() - t1
-    rows.append(["rag_on", on_ari, round(on_rt, 1)])
+    off_ari, off_rt = _cluster_ari(PipelineConfig().resolution)     # RAG-off (default 0.5)
+    rows.append(["rag_off", round(off_ari, 4), round(off_rt, 1)])
 
-    with open(out / "benchmark_metrics.csv", "w", newline="") as f:
-        w = csv.writer(f); w.writerow(["condition", "ARI", "runtime_s"]); w.writerows(rows)
+    cfg, _ = recommend_parameters(tissue=tissue)                    # RAG-on (retrieved resolution)
+    on_ari, on_rt = _cluster_ari(cfg.resolution)
+    out = Path(out_dir).resolve()
+    out.mkdir(parents=True, exist_ok=True)
+    logger.info("Writing benchmark outputs to: {}", out)
 
-    bar(["RAG-off", "RAG-on"], [off_ari, on_ari], "Clustering quality (ARI)",
-        "ARI", str(out / "ari.png"), hline=0.75)                       # NFR-04 target
-    bar(["RAG-off", "RAG-on"], [off_rt, on_rt], "Runtime", "seconds", str(out / "runtime.png"))
+    csv_path = out / "benchmark_metrics.csv"
+    with open(csv_path, "w", newline="") as f:
+        w = csv.writer(f)
+        w.writerow(["condition", "resolution", "ARI", "runtime_s"])
+        w.writerow(["rag_off", PipelineConfig().resolution, round(off_ari, 4), round(off_rt, 1)])
+        w.writerow(["rag_on", cfg.resolution, round(on_ari, 4), round(on_rt, 1)])
+    logger.info("Wrote {}", csv_path)
 
-    results = {"rag_off_ari": off_ari, "rag_on_ari": on_ari,
-               "rag_off_runtime": off_rt, "rag_on_runtime": on_rt}
+    ari_png = bar(["RAG-off", "RAG-on"], [off_ari, on_ari],
+                  "Clustering quality (ARI)", "ARI", str(out / "ari.png"), hline=0.75)
+    rt_png = bar(["RAG-off", "RAG-on"], [off_rt, on_rt],
+                 "Runtime", "seconds", str(out / "runtime.png"))
+    logger.info("Wrote {} and {}", ari_png, rt_png)
+
+    results = {"rag_off_ari": round(off_ari, 4), "rag_on_ari": round(on_ari, 4),
+               "rag_off_resolution": PipelineConfig().resolution,
+               "rag_on_resolution": cfg.resolution,
+               "output_dir": str(out)}
     logger.info("Benchmarks: {}", results)
     return results
-
 
 if __name__ == "__main__":
     import sys

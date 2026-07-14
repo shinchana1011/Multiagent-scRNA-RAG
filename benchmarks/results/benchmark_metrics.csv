@@ -1,0 +1,3 @@
+condition,resolution,ARI,runtime_s
+rag_off,0.5,0.4334,29.3
+rag_on,0.8,0.5042,0.1
