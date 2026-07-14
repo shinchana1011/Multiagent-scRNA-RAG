@@ -65,6 +65,20 @@ elif ss.page == "Results":
     if "n_clusters" not in d:                       # API returned an error dict
         st.error(f"Could not load results: {d}")
         st.stop()
+    
+    # reliability scorecard (novelty headline)
+    try:
+        rep = requests.get(api.report_url(ss.job_id, "json")).json()
+        scard = rep.get("scorecard", {})
+    except Exception:
+        scard = {}
+    if scard:
+        st.markdown("#### Run reliability")
+        s1, s2, s3 = st.columns(3)
+        s1.metric("Reliability score", f"{scard['reliability_score']}/100", scard.get("grade"))
+        s2.metric("Params verified", f"{scard['pct_claims_verified']}%")
+        s3.metric("HIGH clusters", f"{scard['pct_high_confidence']}%")
+        st.caption(rep.get("scorecard_summary", ""))
 
     c1, c2, c3 = st.columns(3)
     c1.metric("Clusters", d["n_clusters"])

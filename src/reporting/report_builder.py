@@ -7,7 +7,7 @@ from src.reporting.methods_section import generate_methods
 from src.reporting.citations import collect_citations, format_citations
 from src.reporting.exporters import export_json, export_html, export_pdf
 from src.reporting.composition import compute_composition, composition_summary, plot_composition
-
+from src.reporting.scorecard import compute_scorecard, scorecard_summary
 
 def build_reports(final, run_dir: str, tissue: str, disease: str) -> dict:
     run = Path(run_dir); run.mkdir(parents=True, exist_ok=True)
@@ -31,12 +31,20 @@ def build_reports(final, run_dir: str, tissue: str, disease: str) -> dict:
     comp_png = plot_composition(composition, str(run / "composition.png"))
     (run / "composition.txt").write_text(comp_summary, encoding="utf-8")
 
+    # --- novelty: run reliability scorecard ---
+    ilisi = None  # optional: pass a real iLISI if you compute it for batch-corrected runs
+    scorecard = compute_scorecard(anns, claims, ilisi=ilisi)
+    score_summary = scorecard_summary(scorecard)
+    (run / "scorecard.txt").write_text(score_summary, encoding="utf-8")
+
     payload = {"title": f"scRNA-seq Report — {tissue} {disease}".strip(),
                "tissue": tissue, "disease": disease, "config": cfg,
                "methods": methods, "citations": citation_text,
                "annotations": anns, "claims": claims,
                "composition": composition,            # <-- add
-               "composition_summary": comp_summary}   # <-- add
+               "composition_summary": comp_summary, "scorecard": scorecard,                 # <-- add
+               "scorecard_summary": score_summary,     }  # <-- add
+    
     export_json(payload, str(run / "report.json"))                                       # FR-23
     export_html(payload, str(run / "report.html"))
     export_pdf(payload, umap, str(run / "report.pdf"))
