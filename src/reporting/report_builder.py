@@ -6,6 +6,7 @@ from src.reporting.figures import plot_umap_confidence
 from src.reporting.methods_section import generate_methods
 from src.reporting.citations import collect_citations, format_citations
 from src.reporting.exporters import export_json, export_html, export_pdf
+from src.reporting.composition import compute_composition, composition_summary, plot_composition
 
 
 def build_reports(final, run_dir: str, tissue: str, disease: str) -> dict:
@@ -24,10 +25,18 @@ def build_reports(final, run_dir: str, tissue: str, disease: str) -> dict:
     (run / "methods.txt").write_text(methods, encoding="utf-8")
     (run / "citations.txt").write_text(citation_text, encoding="utf-8")
 
+    # --- novelty: cell-type composition profiling (deviation flagging, non-diagnostic) ---
+    composition = compute_composition(final["adata"], anns)
+    comp_summary = composition_summary(composition)
+    comp_png = plot_composition(composition, str(run / "composition.png"))
+    (run / "composition.txt").write_text(comp_summary, encoding="utf-8")
+
     payload = {"title": f"scRNA-seq Report — {tissue} {disease}".strip(),
                "tissue": tissue, "disease": disease, "config": cfg,
                "methods": methods, "citations": citation_text,
-               "annotations": anns, "claims": claims}
+               "annotations": anns, "claims": claims,
+               "composition": composition,            # <-- add
+               "composition_summary": comp_summary}   # <-- add
     export_json(payload, str(run / "report.json"))                                       # FR-23
     export_html(payload, str(run / "report.html"))
     export_pdf(payload, umap, str(run / "report.pdf"))

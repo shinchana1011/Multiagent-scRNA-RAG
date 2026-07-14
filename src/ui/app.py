@@ -75,6 +75,14 @@ elif ss.page == "Results":
                    "Confidence": a["confidence"], "State": a.get("cell_state") or "-",
                    "Top markers": ", ".join(a["marker_genes"][:5])} for a in d["annotations"]],
                  use_container_width=True)
+    # composition profiling
+    import requests
+    comp = requests.get(api.report_url(ss.job_id, "json")).json().get("composition", [])
+    if comp:
+        st.subheader("Cell-type composition vs healthy reference")
+        st.caption("Deviation flagging only — no disease is diagnosed.")
+        st.dataframe([{"Cell type": c["cell_type"], "Fraction": f"{c['fraction']:.1%}",
+                       "Status": c["status"]} for c in comp], use_container_width=True)
 
 # ---------- Review (Task 5 / FR-17) ----------
 elif ss.page == "Review":
