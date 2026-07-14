@@ -5,3 +5,7 @@ __pycache__/
 *.pyc
 .pytest_cache/
 data/kb/kb2/
+data/uploads/*
+runs/*
+!data/uploads/.gitkeep
+!runs/.gitkeep

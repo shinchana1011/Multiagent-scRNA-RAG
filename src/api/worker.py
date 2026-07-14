@@ -24,10 +24,15 @@ def execute_job(job_id: str, file_path: str, tissue: str, disease: str, run_dir:
         _dump_results(final, run_dir)
 
         _write_status(run_dir, "running", 80, "Generating reports")
-        from src.reporting.report_builder import build_reports          # Member 4 Task 4
-        build_reports(final, run_dir, tissue=tissue, disease=disease)
-
-        _write_status(run_dir, "done", 100, "Complete")
+        try:
+            from src.reporting.report_builder import build_reports      # Member 4 Task 4
+            build_reports(final, run_dir, tissue=tissue, disease=disease)
+        except Exception as re:                                          # noqa: BLE001
+            import traceback
+            (Path(run_dir) / "report_error.log").write_text(
+                f"{re}\n{traceback.format_exc()}")
+            # analysis succeeded; reporting is best-effort
+        _write_status(run_dir, "done", 100, "Complete (see report_error.log if reports missing)")
     except Exception as e:                                              # noqa: BLE001
         _write_status(run_dir, "failed", 100, "Pipeline failed",
                       error=f"{e}\n{traceback.format_exc()}")
