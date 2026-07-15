@@ -19,7 +19,9 @@ def execute_job(job_id: str, file_path: str, tissue: str, disease: str, run_dir:
         _write_status(run_dir, "running", 15, "Running multi-agent pipeline")
         from src.orchestrator.run_pipeline import run_pipeline
         final = run_pipeline(file_path, tissue=tissue, disease=disease)   # Member 3
-
+        if final.get("error"):
+            _write_status(run_dir, "failed", 100, "Pipeline error", error=final["error"])
+            return
         _write_status(run_dir, "running", 65, "Writing results")
         _dump_results(final, run_dir)
 

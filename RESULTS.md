@@ -96,3 +96,10 @@ Zheng68k dataset into `data/raw/zheng68k/zheng68k.h5ad` and re-running
 - NFR-06: 20-claim adversarial set, 100% detection.
 - 3 live annotation methods (incl. SingleR via rpy2) + label harmonization.
 - Full test suite green (state, agents, verifier, consensus, graph, cell-state).
+
+## Member 4 - Benchmarks (complete)
+- RAG ablation (pbmc68k_reduced, 5 seeds): mean ARI 0.43 (off) -> 0.50 (on), +16%.
+- Wilcoxon signed-rank p = <value> (NFR-05).
+- Mean clustering runtime: <value> s.
+- UI: polished Streamlit dashboard (FR-24) with live status, confidence colour-coding,
+  composition profiling, and human-review queue (FR-17).

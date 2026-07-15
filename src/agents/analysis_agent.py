@@ -8,10 +8,14 @@ class AnalysisAgent(BaseAgent):
     agent_id = "analysis"
 
     def run(self, state: PipelineState) -> PipelineState:
-        state.adata = run_analysis(state.adata, state.config)   # Member 1's code
+        if state.adata is None:
+            state.error = state.error or "No data to analyse"
+            return state
+        state.adata = run_analysis(state.adata, state.config)
         n = state.adata.obs["leiden"].nunique()
         state.log_event(self.agent_id, "analysed", {"clusters": n})
         return state
 
     def validate(self, state: PipelineState) -> bool:
-        return "leiden" in state.adata.obs and "X_umap" in state.adata.obsm
+        return (state.adata is not None
+                and "leiden" in state.adata.obs and "X_umap" in state.adata.obsm)

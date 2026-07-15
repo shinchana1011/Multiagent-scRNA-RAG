@@ -11,3 +11,8 @@ state = AnnotationAgent().run(state)
 for a in state.annotations:
     state_str = f" | state: {a.cell_state}" if a.cell_state else ""
     print(f"cluster {a.cluster_id}: {a.cell_type:14} [{a.confidence}]{state_str}")
+
+# scratch.py
+from src.orchestrator.run_pipeline import run_pipeline
+final = run_pipeline("data/raw/zheng68k/pbmc68k_reduced.h5ad", tissue="PBMC")
+print(len(final["annotations"]))

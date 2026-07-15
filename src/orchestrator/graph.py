@@ -39,8 +39,11 @@ def _route(name: str):
             state.retry_count[name] = tries + 1
             logger.warning("{} failed validation; retry {}/{}", name, tries + 1, state.max_retries)
             return name                                 # loop back to retry
-        logger.error("{} exhausted retries; continuing", name)
-        return _NEXT[name]                              # give up, move on
+        logger.error("{} exhausted retries", name)
+        if name == "data":                             # no data => cannot continue
+            state.error = state.error or "Data loading failed after retries"
+            return END                                 # stop the pipeline cleanly
+        return _NEXT[name]                              # other agents: continue degraded
     return decide
 
 
