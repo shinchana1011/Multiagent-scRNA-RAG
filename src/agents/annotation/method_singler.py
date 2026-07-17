@@ -2,6 +2,11 @@
 from __future__ import annotations
 import numpy as np
 from loguru import logger
+import os
+_R_BIN = r"C:\Program Files\R\R-4.6.1\bin\x64"
+if os.path.exists(_R_BIN) and _R_BIN not in os.environ.get("PATH", ""):
+    os.environ["PATH"] = _R_BIN + os.pathsep + os.environ["PATH"]
+    os.environ.setdefault("R_HOME", r"C:\Program Files\R\R-4.6.1")
 
 
 def annotate_singler(adata) -> dict[str, str]:

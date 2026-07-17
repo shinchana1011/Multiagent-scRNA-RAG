@@ -41,17 +41,11 @@ def execute_job(job_id: str, file_path: str, tissue: str, disease: str, run_dir:
 
 
 def _dump_results(final, run_dir: str) -> None:
-    anns = [{"cluster_id": a.cluster_id, "cell_type": a.cell_type,
-             "confidence": a.confidence, "cell_state": a.cell_state,
-             "marker_genes": a.marker_genes, "method_votes": a.method_votes,
-             "sources": a.sources} for a in final["annotations"]]
-    claims = [{"parameter": c.parameter, "value": c.value, "pmid": c.pmid,
-               "verified": c.verified, "confidence": c.confidence} for c in final["claims"]]
-    (Path(run_dir) / "results.json").write_text(json.dumps({
-        "n_clusters": len(anns), "annotations": anns, "claims": claims,
-        "review_queue": [a["cluster_id"] for a in anns if a["confidence"] == "LOW"],
-    }, default=str, indent=2))
-    # persist Member 1's UMAP AnnData for figure regeneration
+    from src.api.adapters import state_to_results
+    import json
+    from pathlib import Path
+    (Path(run_dir) / "results.json").write_text(
+        json.dumps(state_to_results(final), default=str, indent=2))
     try:
         final["adata"].write(str(Path(run_dir) / "adata.h5ad"))
     except Exception:
