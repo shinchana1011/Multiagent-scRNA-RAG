@@ -15,7 +15,7 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements/base.txt -r requirements/app.txt
           pip install scanpy anndata scikit-learn
-          pip install pytest ruff
+          pip install pytest ruff httpx2
       - name: Lint
         run: ruff check src/ --select E,F --ignore E501 || true
       - name: Run environment-independent tests
