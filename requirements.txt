@@ -3,3 +3,4 @@
 -r requirements/agents.txt
 -r requirements/app.txt
 -r requirements/dev.txt
+-r requirements/base.txt
