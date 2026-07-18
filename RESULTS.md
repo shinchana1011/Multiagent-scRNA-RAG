@@ -103,3 +103,4 @@ Zheng68k dataset into `data/raw/zheng68k/zheng68k.h5ad` and re-running
 - Mean clustering runtime: <value> s.
 - UI: polished Streamlit dashboard (FR-24) with live status, confidence colour-coding,
   composition profiling, and human-review queue (FR-17).
+- Integration testing, performance testing; scope limited to the scope given in docs/TESTING.md

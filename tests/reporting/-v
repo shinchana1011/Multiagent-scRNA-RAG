@@ -1,0 +1,14 @@
+(venv) PS D:\Multiagent-scRNA-RAG> python -m pytest tests/reporting/ -v
+=========================================================================================================== test session starts ===========================================================================================================
+platform win32 -- Python 3.14.0, pytest-9.1.1, pluggy-1.6.0 -- D:\Multiagent-scRNA-RAG\venv\Scripts\python.exe
+cachedir: .pytest_cache
+rootdir: D:\Multiagent-scRNA-RAG
+configfile: pytest.ini
+plugins: anyio-4.14.1, fast-array-utils-1.4.1, langsmith-0.10.0, zarr-3.2.1
+collected 3 items                                                                                                                                                                                                                          
+
+tests/reporting/test_reporting.py::test_scorecard_computes PASSED                                                                                                                                                                    [ 33%]
+tests/reporting/test_reporting.py::test_citations_dedup PASSED                                                                                                                                                                       [ 66%]
+tests/reporting/test_reporting.py::test_composition_flags_status PASSED                                                                                                                                                              [100%]
+
+============================================================================================================ 3 passed in 0.39s ============================================================================================================
