@@ -15,7 +15,6 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements/base.txt -r requirements/app.txt -r requirements/agents.txt
           pip install pytest ruff
-          pip install scanpy anndata scikit-learn faiss-cpu chromadb sentence-transformers
       - name: Lint
         run: ruff check src/ --select E,F --ignore E501 || true
       - name: Run fast tests
