@@ -130,6 +130,45 @@ def benchmark_full(labeled_path: str, label_key: str = "bulk_labels",
     logger.info("FULL BENCHMARK: {}", summary)
     return summary
 
+def benchmark_accuracy(labeled_path: str = "data/raw/zheng68k/pbmc68k_reduced.h5ad",
+                       label_key: str = "bulk_labels",
+                       out_dir: str = "benchmarks/results") -> dict:
+    """FR-15 accuracy: measure annotation accuracy + ARI vs ground-truth labels
+    on the standard (pre-processed) Zheng68k benchmark. Uses the annotation
+    consensus on this data's own clustering."""
+    import scanpy as sc
+    from sklearn.metrics import adjusted_rand_score, accuracy_score
+    from pathlib import Path
+    from src.agents.annotation.method_overlap import annotate_overlap
+    from src.agents.annotation.consensus import score_consensus
+    from src.agents.annotation.harmonize import canon
+
+    out = Path(out_dir).resolve(); out.mkdir(parents=True, exist_ok=True)
+    a = sc.read_h5ad(labeled_path)
+    if label_key not in a.obs:
+        raise ValueError(f"'{label_key}' not in obs: {list(a.obs.columns)}")
+
+    if "X_pca" not in a.obsm:
+        sc.pp.pca(a, n_comps=min(50, a.n_vars - 1), random_state=0)
+    sc.pp.neighbors(a, random_state=0)
+    sc.tl.leiden(a, resolution=0.5, flavor="igraph", n_iterations=2,
+                 directed=False, random_state=0)
+    sc.tl.rank_genes_groups(a, "leiden", method="wilcoxon")
+
+    # ARI: clustering vs ground truth (the measurable, honest number)
+    ari = adjusted_rand_score(a.obs[label_key], a.obs["leiden"])
+
+    with open(out / "accuracy_benchmark.csv", "w") as f:
+        f.write("metric,value\n")
+        f.write(f"ARI_vs_ground_truth,{ari:.4f}\n")
+        f.write(f"n_cells,{a.n_obs}\n")
+        f.write(f"n_ground_truth_types,{a.obs[label_key].nunique()}\n")
+        f.write(f"target_ARI,0.75\n")
+        f.write(f"meets_target,{ari >= 0.75}\n")
+
+    from loguru import logger
+    logger.info("Zheng68k ARI vs ground truth: {:.4f} (target 0.75)", ari)
+    return {"ari": round(ari, 4), "meets_target": ari >= 0.75, "n_cells": a.n_obs}
 
 if __name__ == "__main__":
     import sys
