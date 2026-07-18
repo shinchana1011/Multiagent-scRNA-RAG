@@ -2,190 +2,192 @@
 
 **A Multi-Agent Retrieval-Augmented Framework for Reliable scRNA-seq UMAP Analysis and Cell-Type Annotation**
 
-An autonomous, multi-agent, Retrieval-Augmented Generation (RAG) pipeline that takes a raw
-single-cell RNA-seq file and produces a clustered, annotated UMAP with a publication-ready,
-fully-cited report — grounding every analytical parameter in published literature and scoring
-every cell-type annotation with a confidence level.
+An autonomous, multi-agent RAG pipeline that takes a raw single-cell RNA-seq file and produces a
+clustered, annotated UMAP with a fully-cited, publication-ready report — grounding every analytical
+parameter in published literature and scoring every cell-type annotation with a confidence level.
 
 ---
 
 ## Why this project
 
-Standard scRNA-seq analysis is slow (6–8 weeks of expert effort per dataset), irreproducible
-(parameters are chosen by intuition, not evidence), and unreliable at the annotation step
-(different methods disagree by up to 30 percentage points). This system automates the full
-pipeline while (1) retrieving evidence-based parameters from literature with citations, and
-(2) cross-checking cell-type labels across three methods to produce confidence-scored,
-verifiable output.
+Standard scRNA-seq analysis is slow, irreproducible (parameters chosen by intuition), and unreliable
+at annotation (methods disagree by up to 30 percentage points). This system automates the pipeline
+while (1) retrieving evidence-based parameters from literature *with citations*, (2) verifying each
+citation with a three-check protocol, and (3) cross-checking cell-type labels across three independent
+methods to produce confidence-scored, reviewable output.
 
 ---
 
-## Project status
+## Status: complete
 
 | Stream | Component | Status |
 |---|---|---|
-| **Member 1** | Bioinformatics pipeline (ingestion → QC → norm → PCA/Harmony → Leiden → UMAP → markers) | ✅ **Working end-to-end** |
-| Member 2 | RAG knowledge base (KB-1 / KB-2) + parameter retrieval | 🚧 In progress |
-| Member 3 | Multi-agent system, verification, annotation, orchestration | 🚧 In progress |
-| Member 4 | FastAPI backend, Streamlit UI, report generation, Docker/CI | 🚧 In progress |
+| Member 1 | Bioinformatics pipeline (QC → norm → PCA/Harmony → Leiden → UMAP → markers) | ✅ Complete |
+| Member 2 | RAG knowledge base (KB-1 FAISS / KB-2 ChromaDB) + parameter retrieval | ✅ Complete |
+| Member 3 | Multi-agent system, verification, 3-method annotation, LangGraph orchestration | ✅ Complete |
+| Member 4 | FastAPI backend, Streamlit UI, report generation, benchmarks, CI, containerization | ✅ Complete |
 
-The analysis pipeline runs today on PBMC3k and the multi-batch COVID (GSE145926) dataset.
-The RAG, agent-orchestration, and UI layers are under active development.
+Runs end-to-end on PBMC3k, Paul15, and multi-batch COVID (GSE145926). 62 tests passing locally;
+CI validates environment-independent components on every push.
 
 ---
 
 ## Architecture
+Streamlit UI  ──►  FastAPI backend  ──►  LangGraph orchestrator
+│
+┌─────────────────────────────────────┼─────────────────────────────┐
+Data Agent   Parameter Agent   Verifier Agent   Analysis Agent   Annotation Agent
+│             │                │               │                  │
+load/validate  RAG (KB-1)     3-check verify   Scanpy pipeline   3-method consensus
+(SingleR + marker
+overlap + KB-2)
+│
+Report generation
+(UMAP · Methods · citations · scorecard · composition)
 
-```
-User Interface (Streamlit)        [Member 4]
-        │
-FastAPI backend                   [Member 4]
-        │
-LangGraph orchestrator            [Member 3]
-        │
-Agents  ── RAG Parameter Agent    [Member 2/3]
-        ── Verifier Agent         [Member 3]
-        ── Analysis Agent ────────► Bioinformatics pipeline  [Member 1] ✅
-        ── Annotation Agent       [Member 3]
-        ── Report Agent           [Member 4]
-        │
-RAG layer ── KB-1 (Methods, FAISS) / KB-2 (Annotation, ChromaDB)  [Member 2]
-        │
-Storage (AnnData, logs, reports)
-```
+Single entry point: `run_pipeline(input_path, tissue, disease)` → dict with
+`config, claims, annotations, log, adata, error`.
 
 ---
 
 ## Tech stack
 
-- **Language:** Python 3.12+
-- **Bioinformatics:** Scanpy 1.12, AnnData, harmonypy; SingleR + ScType (R, via rpy2)
-- **AI / RAG:** LangGraph, LangChain, sentence-transformers, FAISS, ChromaDB
-- **ML utils:** scikit-learn, scipy
-- **Backend / Frontend:** FastAPI, Streamlit
-- **Utilities:** Pydantic, python-dotenv, Loguru, pytest, Docker
+- **Bioinformatics:** Scanpy, AnnData, harmonypy; SingleR + celldex (R, via rpy2)
+- **RAG:** LangGraph, sentence-transformers, FAISS (KB-1), ChromaDB (KB-2)
+- **LLM:** Ollama (llama3.1, local) — parameter extraction + Methods generation
+- **Backend/Frontend:** FastAPI, Streamlit
+- **Reporting:** reportlab (PDF), Jinja2, matplotlib
+- **Utils:** Pydantic, Loguru, pytest; containerized via Podman/Docker
 
 ---
 
 ## Repository structure
-
-```
-MultiAgent-scRNA-RAG/
+Multiagent-scRNA-RAG/
+├── .github/workflows/ci.yml    # CI (environment-independent tests)
+├── .streamlit/config.toml      # UI config (upload size)
+├── benchmarks/results/         # ARI / runtime / ablation outputs
 ├── data/
-│   ├── raw/                # downloaded datasets (gitignored)
-│   └── processed/          # pipeline outputs + figures (gitignored)
-├── requirements/
-│   ├── base.txt            # shared core
-│   ├── pipeline.txt        # Member 1
-│   ├── rag.txt             # Member 2
-│   ├── agents.txt          # Member 3
-│   ├── app.txt             # Member 4
-│   └── dev.txt             # testing / linting
-├── scripts/
-│   ├── download_data.py    # fetch / assemble datasets
-│   └── install_r_deps.R    # SingleR + celldex (Member 3)
+│   ├── kb/                     # KB-1 (FAISS) + KB-2 (ChromaDB) + corpus
+│   ├── raw/                    # datasets (gitignored)
+│   └── uploads/                # UI uploads (gitignored)
+├── docker/                     # Dockerfile, Dockerfile.lite, docker-compose.yml
+├── docs/                       # CONTRACT.md, MANUAL_TESTING.md, TESTING.md, agent_dag.png
+├── requirements/               # base / app / agents / rag / pipeline / dev
 ├── src/
-│   ├── io/readers.py       # load .h5/.h5ad/.loom + validation  [Task 1] ✅
-│   ├── pipeline/
-│   │   ├── qc.py           # QC metrics + filtering             [Task 2] ✅
-│   │   ├── normalize.py    # normalise / HVG / scale            [Task 3] ✅
-│   │   ├── reduce.py       # PCA / Harmony / neighbours         [Task 4] ✅
-│   │   ├── cluster.py      # Leiden + UMAP                      [Task 5] ✅
-│   │   ├── markers.py      # marker gene extraction             [Task 6] ✅
-│   │   └── runner.py       # run_analysis(adata, cfg)           [Task 7] ✅
-│   ├── plots/figures.py    # QC / UMAP / dotplot figures        [Task 8] ✅
-│   └── schemas/config.py   # PipelineConfig (frozen contract)
-├── tests/                  # pytest unit tests
-├── requirements.txt        # installs all layers (for Docker)
-├── Dockerfile
-└── README.md
-```
+│   ├── io/                     # readers + validation           [Member 1]
+│   ├── pipeline/               # QC, normalize, reduce, cluster, markers, runner  [Member 1]
+│   ├── plots/                  # figures                          [Member 1]
+│   ├── rag/                    # retriever, recommender, LLM extractor  [Member 2]
+│   ├── knowledge_base/         # KB-1 / KB-2 stores               [Member 2]
+│   ├── agents/                 # data, parameter, verifier, analysis, annotation  [Member 3]
+│   ├── orchestrator/           # LangGraph graph + run_pipeline   [Member 3]
+│   ├── schemas/                # PipelineConfig, PipelineState     [Member 1/3]
+│   ├── api/                    # FastAPI backend + adapters        [Member 4]
+│   ├── ui/                     # Streamlit dashboard               [Member 4]
+│   ├── reporting/              # figures, methods, citations, scorecard, composition  [Member 4]
+│   ├── config/                 # settings + logging                [Member 4]
+│   └── benchmarks/             # ARI / runtime / ablation          [Member 4]
+├── tests/                      # 62 tests (unit, integration, API, reporting, failure)
+└── runs/                       # per-job outputs (gitignored)
 
 ---
 
 ## Setup
 
-### 1. Prerequisites
-- Python 3.12 or newer
-- Git
-- (Member 3 only, later) R 4.3+ for SingleR/ScType
+### Prerequisites
+- Python 3.11+
+- R 4.x + Bioconductor (SingleR, celldex) — for 3-method annotation
+- [Ollama](https://ollama.com) running with `ollama pull llama3.1`
 
-### 2. Clone and create a virtual environment
+### Install
 ```bash
 git clone https://github.com/shinchana1011/Multiagent-scRNA-RAG.git
 cd Multiagent-scRNA-RAG
 python -m venv venv
-# Windows:
-venv\Scripts\activate
-# macOS / Linux:
-source venv/bin/activate
+venv\Scripts\activate            # Windows  (source venv/bin/activate on macOS/Linux)
+
+pip install -r requirements/base.txt -r requirements/app.txt \
+            -r requirements/agents.txt -r requirements/rag.txt
+# R deps (for SingleR):
+R -e "install.packages('BiocManager'); BiocManager::install(c('SingleR','celldex'))"
 ```
 
-### 3. Install dependencies
-Install only the layer you need. To run the analysis pipeline (Member 1):
-```bash
-pip install -r requirements/pipeline.txt
-pip install -r requirements/dev.txt      # for running tests
-```
-For the full system (all members / Docker):
-```bash
-pip install -r requirements.txt
-```
+**Windows R note:** if SingleR fails to load `stats.dll`, add R's binary folder to PATH
+(`C:\Program Files\R\R-4.x.x\bin\x64`) and set `R_HOME`. The pipeline degrades gracefully to
+2-method consensus if R is unavailable.
 
 ---
 
-## Getting the data
+## Running the system
 
-Datasets are **not** committed to the repo. Fetch them with:
+Three processes (three terminals):
 ```bash
-python scripts/download_data.py
+ollama serve                                    # local LLM
+python -m src.api.main                          # FastAPI backend  (localhost:8000)
+python -m streamlit run src/ui/app.py           # UI               (localhost:8501)
 ```
-- **PBMC3k** — downloads automatically via Scanpy.
-- **COVID GSE145926** (multi-batch) — download `GSE145926_RAW.tar` from
-  [GEO](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE145926), extract the twelve
-  `.h5` files into `data/raw/covid_gse145926/source/`, then re-run the script.
-- **Tabula Sapiens** (scale test) — download a tissue `.h5ad` from CELLxGENE into
-  `data/raw/tabula_sapiens/source/`, then re-run.
+Open http://localhost:8501, upload `data/raw/pbmc3k/pbmc3k_raw.h5ad`, select tissue = PBMC.
+Watch progress → view annotated results, reliability scorecard, and composition → review
+LOW-confidence clusters → download the PDF/HTML/JSON report.
 
-The script prints the exact folder to place manual downloads in.
-
----
-
-## Running the analysis pipeline
-
-The entire Member 1 pipeline runs through one call. Minimal example:
+**Programmatic use:**
 ```python
-from src.io.readers import load_dataset
-from src.schemas.config import PipelineConfig
-from src.pipeline.runner import run_analysis
-from src.plots.figures import plot_umap, plot_marker_dotplot
-
-adata = load_dataset("data/raw/pbmc3k/pbmc3k_raw.h5ad")
-cfg = PipelineConfig()                 # defaults = the RAG-off baseline
-adata = run_analysis(adata, cfg)
-
-print("clusters:", adata.obs["leiden"].nunique())
-plot_umap(adata, "data/processed/figures")
-plot_marker_dotplot(adata, "data/processed/figures")
+from src.orchestrator.run_pipeline import run_pipeline
+final = run_pipeline("data/raw/pbmc3k/pbmc3k_raw.h5ad", tissue="PBMC")
+print(len(final["annotations"]), "clusters annotated")
 ```
-Expected on PBMC3k: ~2,643 cells after QC, ~8–12 Leiden clusters, and a UMAP figure written
-to `data/processed/figures/umap_leiden.png`.
 
-`run_analysis(adata, cfg)` is the integration point: every parameter comes from `cfg`, so
-Member 2's RAG-retrieved `PipelineConfig` plugs in with no code changes, and the default `cfg`
-serves as the ablation baseline (NFR-05).
+**Input must be raw counts** (`.h5` / `.h5ad` / `.loom`). Pre-processed matrices are rejected by
+design (FR-02) to prevent silent double-normalization.
 
 ---
 
-## Running tests
+## Reproduce benchmarks
+```bash
+python -m src.benchmarks.run_benchmarks
+```
+Outputs ARI / runtime / ablation plots + CSVs to `benchmarks/results/`.
 
+---
+
+## Testing
 ```bash
-python -m pytest -v
+python -m pytest tests/ -v                 # full local suite (62 tests)
+python -m pytest tests/ -v -m "not slow"   # fast subset (CI scope)
 ```
-Run a single module:
+CI (GitHub Actions) runs environment-independent tests (integration, API, I/O, reporting) on every
+push. Tests needing FAISS, LangGraph, R/SingleR, Ollama, or datasets run locally and via the manual
+protocol in `docs/MANUAL_TESTING.md`.
+
+---
+
+## Containerization
 ```bash
-python -m pytest tests/pipeline/test_qc.py -v
+podman build -f docker/Dockerfile.lite -t scrna-rag-lite .
+podman run -p 8000:8000 scrna-rag-lite
+# or full stack:  docker compose -f docker/docker-compose.yml up
 ```
+Two images: `Dockerfile.lite` (Python-only, 2-method consensus, fast) and `Dockerfile`
+(with R/SingleR for 3-method). Compose orchestrates API + UI + Ollama.
+
+---
+
+## Results
+
+| Metric | Result | Notes |
+|---|---|---|
+| RAG ablation (ARI) | 0.43 → 0.50 (+16%) | RAG-off vs RAG-on, pbmc68k_reduced |
+| Verifier detection | 100% (20/20) | adversarial citation set (NFR-06) |
+| Retry recovery | 100% (4/4) | simulated agent failures (FR-25) |
+| Batch mixing (iLISI) | 2.21 | COVID GSE145926 (> 1.5 target) |
+| Retrieval accuracy | 83% top-1 | tissue-matched parameter retrieval |
+| Annotation ARI | 0.43 | pbmc68k_reduced subset; below 0.75 target — see below |
+
+**Honest limitations:** The FR-15 accuracy target (ARI ≥ 0.75 / accuracy ≥ 80%) was evaluated on the
+700-cell `pbmc68k_reduced` benchmark subset and came in below target — Zheng68k is a known-difficult
+benchmark (imbalanced, molecularly similar populations); full-scale raw Zheng68k validation is future
+work. Expert biological validation (Cohen's κ) is documented as future work; the human-review queue
+provides the operational review UI in its place.
 
 ---
 
@@ -193,39 +195,12 @@ python -m pytest tests/pipeline/test_qc.py -v
 
 | Member | Responsibility | Owns |
 |---|---|---|
-| 1 | Bioinformatics & data pipeline | `src/io/`, `src/pipeline/`, `src/plots/`, `scripts/` |
-| 2 | RAG & knowledge base | `src/rag/`, `src/knowledge_base/`, `data/kb/` |
-| 3 | Multi-agent system & AI logic | `src/agents/`, `src/orchestrator/`, `src/schemas/` |
-| 4 | Backend, frontend & integration | `src/api/`, `src/ui/`, `src/reporting/`, `docker/`, `.github/` |
-
----
-
-## Git workflow
-
-- `main` — protected, always working.
-- `dev` — integration branch.
-- Feature branches per member: `feat/m1-pipeline`, `feat/m2-rag`, `feat/m3-agents`, `feat/m4-app`.
-- PRs go into `dev`; `dev` is merged to `main` at weekly integration checkpoints.
-
-**Contract rule:** `src/schemas/config.py` (`PipelineConfig`) is a shared contract. Do not rename
-its fields without team sign-off — three streams depend on it.
-
----
-
-## Benchmarks (targets)
-
-| Metric | Target | Dataset |
-|---|---|---|
-| Clustering quality (ARI) | ≥ 0.75 | Zheng68k |
-| Annotation accuracy | ≥ 80% | Zheng68k |
-| Verifier sensitivity | ≥ 90% | adversarial citation set |
-| Expert agreement (Cohen's κ) | ≥ 0.70 | 100 blind annotations |
-| Batch mixing (iLISI) | > 1.5 | COVID GSE145926 |
-| End-to-end runtime | < 10 min | PBMC3k |
+| 1 | Bioinformatics pipeline | `src/io`, `src/pipeline`, `src/plots` |
+| 2 | RAG & knowledge base | `src/rag`, `src/knowledge_base`, `data/kb` |
+| 3 | Multi-agent system & orchestration | `src/agents`, `src/orchestrator`, `src/schemas` |
+| 4 | Backend, frontend, integration | `src/api`, `src/ui`, `src/reporting`, `src/benchmarks`, `docker`, `.github` |
 
 ---
 
 ## License
-
-Released under an open-source license (see `LICENSE`). Benchmark datasets are publicly available
-via NCBI GEO, 10x Genomics, and CELLxGENE.
+See `LICENSE`. Benchmark datasets are publicly available via NCBI GEO, 10x Genomics, and CELLxGENE.
