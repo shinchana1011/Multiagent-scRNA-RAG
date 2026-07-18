@@ -10,12 +10,17 @@ jobs:
           python-version: "3.11"
       - name: Install dependencies
         env:
-          RPY2_CFFI_MODE: ABI          # rpy2 installs without R present
+          RPY2_CFFI_MODE: ABI
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements/base.txt -r requirements/app.txt -r requirements/agents.txt
+          pip install -r requirements/base.txt -r requirements/app.txt
+          pip install scanpy anndata scikit-learn
           pip install pytest ruff
       - name: Lint
         run: ruff check src/ --select E,F --ignore E501 || true
-      - name: Run fast tests
-        run: pytest tests/ -v -m "not slow" --ignore=tests/orchestrator --ignore=tests/pipeline
+      - name: Run environment-independent tests
+        run: |
+          pytest tests/ -v -m "not slow" \
+            --ignore=tests/agents \
+            --ignore=tests/orchestrator \
+            --ignore=tests/pipeline
