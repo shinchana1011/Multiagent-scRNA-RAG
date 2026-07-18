@@ -9,3 +9,6 @@ data/uploads/*
 runs/*
 !data/uploads/.gitkeep
 !runs/.gitkeep
+data/*
+!data/kb/
+!data/.gitkeep
