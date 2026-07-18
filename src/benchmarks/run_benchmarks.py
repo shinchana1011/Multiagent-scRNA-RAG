@@ -146,16 +146,16 @@ def benchmark_accuracy(labeled_path: str = "data/raw/zheng68k/pbmc68k_reduced.h5
     out = Path(out_dir).resolve(); out.mkdir(parents=True, exist_ok=True)
     a = sc.read_h5ad(labeled_path)
     if label_key not in a.obs:
-        raise ValueError(f"'{label_key}' not in obs: {list(a.obs.columns)}")
-
-    if "X_pca" not in a.obsm:
-        sc.pp.pca(a, n_comps=min(50, a.n_vars - 1), random_state=0)
+        raise ValueError(...)
+    # normalize like the real pipeline BEFORE clustering
+    sc.pp.normalize_total(a, target_sum=1e4)
+    sc.pp.log1p(a)
+    sc.pp.highly_variable_genes(a, n_top_genes=2000)
+    a = a[:, a.var.highly_variable]
+    sc.pp.scale(a, max_value=10)
+    sc.pp.pca(a, n_comps=min(50, a.n_vars - 1), random_state=0)
     sc.pp.neighbors(a, random_state=0)
-    sc.tl.leiden(a, resolution=0.5, flavor="igraph", n_iterations=2,
-                 directed=False, random_state=0)
-    sc.tl.rank_genes_groups(a, "leiden", method="wilcoxon")
-
-    # ARI: clustering vs ground truth (the measurable, honest number)
+    sc.tl.leiden(a, resolution=0.5, flavor="igraph", n_iterations=2, directed=False, random_state=0)
     ari = adjusted_rand_score(a.obs[label_key], a.obs["leiden"])
 
     with open(out / "accuracy_benchmark.csv", "w") as f:

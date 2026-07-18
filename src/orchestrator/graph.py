@@ -53,9 +53,8 @@ def build_graph():
         g.add_node(name, _node(name))
     g.set_entry_point("data")
     for name in _AGENTS:
-        # each node routes through its conditional edge
         targets = {_NEXT[name]: _NEXT[name], name: name}
-        if _NEXT[name] is END:
-            targets = {END: END, name: name}
+        if name == "data":
+            targets[END] = END          # allow data node to route to END on failure
         g.add_conditional_edges(name, _route(name), targets)
     return g.compile()
