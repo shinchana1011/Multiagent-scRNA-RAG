@@ -1,28 +1,28 @@
-FROM python:3.12-slim
+# docker/Dockerfile — full image with R/SingleR (Member 4, Task 8)
+FROM python:3.11-slim
 
-ENV PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONUNBUFFERED=1 \
-    PIP_NO_CACHE_DIR=1
+# system deps + R
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    r-base r-base-dev build-essential \
+    libcurl4-openssl-dev libssl-dev libxml2-dev libfontconfig1-dev \
+    && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
-# build-essential: compiles igraph/leidenalg for scanpy's leiden backend
-# r-base: required for rpy2 (Member 3's SingleR/ScType bridge)
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential \
-    r-base \
-    libxml2-dev \
-    libcurl4-openssl-dev \
-    libssl-dev \
-    && rm -rf /var/lib/apt/lists/*
-
-COPY requirements.txt .
+# Python deps first (layer caching)
 COPY requirements/ requirements/
-RUN pip install -r requirements.txt
+RUN pip install --no-cache-dir \
+    -r requirements/base.txt \
+    -r requirements/app.txt \
+    -r requirements/agents.txt
 
-COPY scripts/install_r_deps.R scripts/install_r_deps.R
-RUN Rscript scripts/install_r_deps.R
+# R deps (SingleR + celldex) — slow layer, cached unless requirements change
+RUN R -e "install.packages('BiocManager', repos='https://cloud.r-project.org'); \
+          BiocManager::install(c('SingleR','celldex'), update=FALSE, ask=FALSE)"
 
 COPY . .
+ENV PYTHONPATH=/app
+ENV R_HOME=/usr/lib/R
+EXPOSE 8000 8501
 
-CMD ["python", "-m", "scripts.download_data"]
+CMD ["python", "-m", "src.api.main"]

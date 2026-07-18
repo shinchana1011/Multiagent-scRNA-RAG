@@ -1,0 +1,12 @@
+# docker/Dockerfile.lite — lightweight image, no R (2-method consensus) (Member 4)
+FROM python:3.11-slim
+WORKDIR /app
+RUN apt-get update && apt-get install -y --no-install-recommends build-essential \
+    && rm -rf /var/lib/apt/lists/*
+COPY requirements/ requirements/
+ENV RPY2_CFFI_MODE=ABI
+RUN pip install --no-cache-dir -r requirements/base.txt -r requirements/app.txt -r requirements/agents.txt
+COPY . .
+ENV PYTHONPATH=/app
+EXPOSE 8000 8501
+CMD ["python", "-m", "src.api.main"]

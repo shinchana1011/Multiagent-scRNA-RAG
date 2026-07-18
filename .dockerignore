@@ -1,0 +1,8 @@
+venv/
+runs/
+data/uploads/
+data/kb/kb1_index/
+__pycache__/
+*.pyc
+.git/
+.pytest_cache/
