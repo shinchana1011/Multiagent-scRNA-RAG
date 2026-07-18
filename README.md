@@ -33,21 +33,25 @@ CI validates environment-independent components on every push.
 ---
 
 ## Architecture
-Streamlit UI  ──►  FastAPI backend  ──►  LangGraph orchestrator
-│
-┌─────────────────────────────────────┼─────────────────────────────┐
-Data Agent   Parameter Agent   Verifier Agent   Analysis Agent   Annotation Agent
-│             │                │               │                  │
-load/validate  RAG (KB-1)     3-check verify   Scanpy pipeline   3-method consensus
-(SingleR + marker
-overlap + KB-2)
-│
-Report generation
-(UMAP · Methods · citations · scorecard · composition)
 
-Single entry point: `run_pipeline(input_path, tissue, disease)` → dict with
-`config, claims, annotations, log, adata, error`.
+```text
+   Streamlit UI  ──►  FastAPI backend  ──►  LangGraph orchestrator
+                                                    │
+        ┌───────────────┬───────────────┬──────────┴────┬──────────────────┐
+        ▼               ▼               ▼               ▼                  ▼
+   Data Agent    Parameter Agent   Verifier Agent  Analysis Agent   Annotation Agent
+        │               │               │               │                  │
+   load/validate     RAG (KB-1)     3-check verify  Scanpy pipeline   3-method consensus
+                                                                      (SingleR + marker
+                                                                       overlap + KB-2)
+                                                    │
+                                                    ▼
+                                            Report generation
+                          (UMAP · Methods · citations · scorecard · composition)
+```
 
+**Single entry point:** `run_pipeline(input_path, tissue, disease)` → dict with
+`config`, `claims`, `annotations`, `log`, `adata`, `error`.
 ---
 
 ## Tech stack
@@ -62,34 +66,36 @@ Single entry point: `run_pipeline(input_path, tissue, disease)` → dict with
 ---
 
 ## Repository structure
-Multiagent-scRNA-RAG/
-├── .github/workflows/ci.yml    # CI (environment-independent tests)
-├── .streamlit/config.toml      # UI config (upload size)
-├── benchmarks/results/         # ARI / runtime / ablation outputs
-├── data/
-│   ├── kb/                     # KB-1 (FAISS) + KB-2 (ChromaDB) + corpus
-│   ├── raw/                    # datasets (gitignored)
-│   └── uploads/                # UI uploads (gitignored)
-├── docker/                     # Dockerfile, Dockerfile.lite, docker-compose.yml
-├── docs/                       # CONTRACT.md, MANUAL_TESTING.md, TESTING.md, agent_dag.png
-├── requirements/               # base / app / agents / rag / pipeline / dev
-├── src/
-│   ├── io/                     # readers + validation           [Member 1]
-│   ├── pipeline/               # QC, normalize, reduce, cluster, markers, runner  [Member 1]
-│   ├── plots/                  # figures                          [Member 1]
-│   ├── rag/                    # retriever, recommender, LLM extractor  [Member 2]
-│   ├── knowledge_base/         # KB-1 / KB-2 stores               [Member 2]
-│   ├── agents/                 # data, parameter, verifier, analysis, annotation  [Member 3]
-│   ├── orchestrator/           # LangGraph graph + run_pipeline   [Member 3]
-│   ├── schemas/                # PipelineConfig, PipelineState     [Member 1/3]
-│   ├── api/                    # FastAPI backend + adapters        [Member 4]
-│   ├── ui/                     # Streamlit dashboard               [Member 4]
-│   ├── reporting/              # figures, methods, citations, scorecard, composition  [Member 4]
-│   ├── config/                 # settings + logging                [Member 4]
-│   └── benchmarks/             # ARI / runtime / ablation          [Member 4]
-├── tests/                      # 62 tests (unit, integration, API, reporting, failure)
-└── runs/                       # per-job outputs (gitignored)
 
+```text
+Multiagent-scRNA-RAG/
+├── .github/workflows/ci.yml     # CI (environment-independent tests)
+├── .streamlit/config.toml       # UI config (upload size)
+├── benchmarks/results/          # ARI / runtime / ablation outputs
+├── data/
+│   ├── kb/                      # KB-1 (FAISS) + KB-2 (ChromaDB) + corpus
+│   ├── raw/                     # datasets (gitignored)
+│   └── uploads/                 # UI uploads (gitignored)
+├── docker/                      # Dockerfile, Dockerfile.lite, docker-compose.yml
+├── docs/                        # CONTRACT.md, MANUAL_TESTING.md, TESTING.md, agent_dag.png
+├── requirements/                # base / app / agents / rag / pipeline / dev
+├── src/
+│   ├── io/                      # readers + validation                        [Member 1]
+│   ├── pipeline/                # QC, normalize, reduce, cluster, markers      [Member 1]
+│   ├── plots/                   # figures                                     [Member 1]
+│   ├── rag/                     # retriever, recommender, LLM extractor        [Member 2]
+│   ├── knowledge_base/          # KB-1 / KB-2 stores                          [Member 2]
+│   ├── agents/                  # data, parameter, verifier, analysis, annot.  [Member 3]
+│   ├── orchestrator/            # LangGraph graph + run_pipeline               [Member 3]
+│   ├── schemas/                 # PipelineConfig, PipelineState              [Member 1/3]
+│   ├── api/                     # FastAPI backend + adapters                   [Member 4]
+│   ├── ui/                      # Streamlit dashboard                          [Member 4]
+│   ├── reporting/               # figures, methods, citations, scorecard       [Member 4]
+│   ├── config/                  # settings + logging                          [Member 4]
+│   └── benchmarks/              # ARI / runtime / ablation                     [Member 4]
+├── tests/                       # 62 tests (unit, integration, API, reporting)
+└── runs/                        # per-job outputs (gitignored)
+```
 ---
 
 ## Setup
