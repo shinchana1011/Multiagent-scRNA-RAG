@@ -94,7 +94,7 @@ Multiagent-scRNA-RAG/
 │   ├── reporting/               # figures, methods, citations, scorecard       [Member 4]
 │   ├── config/                  # settings + logging                          [Member 4]
 │   └── benchmarks/              # ARI / runtime / ablation                     [Member 4]
-├── tests/                       # 62 tests (unit, integration, API, reporting)
+├── tests/                       # 63 tests (unit, integration, API, reporting)
 └── runs/                        # per-job outputs (gitignored)
 ```
 
