@@ -10,4 +10,9 @@ def test_tie_low():
     assert score_consensus({"a": "B cell", "b": "T cell"})[1] == "LOW"
 
 def test_ignores_unknown():
-    assert score_consensus({"a": "B cell", "b": "Unknown", "c": ""}) == ("B cell", "HIGH")
+    # only "a" is a valid vote (b=Unknown, c=empty are excluded) -- a single
+    # method's opinion must not be reported as HIGH-confidence consensus.
+    assert score_consensus({"a": "B cell", "b": "Unknown", "c": ""}) == ("B cell", "LOW")
+
+def test_single_valid_vote_is_low_not_high():
+    assert score_consensus({"a": "B cell"}) == ("B cell", "LOW")

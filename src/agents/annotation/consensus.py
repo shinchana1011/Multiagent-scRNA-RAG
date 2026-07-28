@@ -15,7 +15,11 @@ def score_consensus(votes: dict[str, str]) -> tuple[str, str]:
     winner, top_count = tally.most_common(1)[0]
     n = len(valid)
 
-    if top_count == n:
+    if n < 2:
+        # a single method's opinion is not consensus -- trivially "unanimous"
+        # at n=1 but not trustworthy; forces a human-review flag instead.
+        confidence = "LOW"
+    elif top_count == n:
         confidence = "HIGH"
     elif top_count > n / 2:
         confidence = "MED"

@@ -10,6 +10,24 @@ def _ari(adata, label_key: str) -> float:
     return float(adjusted_rand_score(adata.obs[label_key], adata.obs["leiden"]))
 
 
+def _ensure_log_normalized(adata) -> None:
+    """Guard against both failure modes: normalizing raw counts is required before
+    PCA, but re-normalizing already-processed data (e.g. scanpy's pbmc68k_reduced
+    ships pre-normalized + log1p'd) silently corrupts it. Decide from the data
+    itself: raw counts have a large, integer-valued max; log-normalized data
+    doesn't."""
+    import scanpy as sc
+
+    mx = float(adata.X.max())
+    looks_raw = mx > 30 and mx.is_integer()
+    if looks_raw:
+        sc.pp.normalize_total(adata, target_sum=1e4)
+        sc.pp.log1p(adata)
+        logger.info("Detected raw counts (max={:.0f}); applied normalize_total + log1p", mx)
+    else:
+        logger.info("Detected pre-normalized data (max={:.2f}); skipping normalize/log1p", mx)
+
+
 def benchmark_all(labeled_path: str, label_key: str = "bulk_labels",
                   out_dir: str = "benchmarks/results", tissue: str = "PBMC") -> dict:
     """Benchmark on a labeled (possibly pre-processed) dataset. Measures ARI of
@@ -28,6 +46,7 @@ def benchmark_all(labeled_path: str, label_key: str = "bulk_labels",
             raise ValueError(f"'{label_key}' not in obs: {list(a.obs.columns)}")
         t = time.time()
         if "X_pca" not in a.obsm:                    # compute PCA if absent
+            _ensure_log_normalized(a)
             sc.pp.pca(a, n_comps=min(50, a.n_vars - 1), random_state=0)
         sc.pp.neighbors(a, random_state=0)
         sc.tl.leiden(a, resolution=resolution, flavor="igraph",
@@ -66,9 +85,15 @@ def benchmark_all(labeled_path: str, label_key: str = "bulk_labels",
 
 def benchmark_full(labeled_path: str, label_key: str = "bulk_labels",
                    out_dir: str = "benchmarks/results", tissue: str = "PBMC",
-                   n_seeds: int = 5) -> dict:
+                   n_seeds: int = 20) -> dict:
     """Complete benchmark: RAG ablation across multiple seeds with a Wilcoxon
-    signed-rank test (NFR-05), plus runtime. Writes a consolidated summary."""
+    signed-rank test (NFR-05), plus runtime. Writes a consolidated summary.
+
+    n_seeds=20, not 5: the exact two-sided Wilcoxon signed-rank test has a hard
+    floor of p=0.0625 at n=5 (2/32) -- p<0.05 is mathematically unreachable at
+    that sample size regardless of effect size. 20 seeds is the minimum that
+    makes the significance claim meaningful rather than structurally capped.
+    """
     import scanpy as sc
     from scipy.stats import wilcoxon
     from sklearn.metrics import adjusted_rand_score
@@ -83,6 +108,7 @@ def benchmark_full(labeled_path: str, label_key: str = "bulk_labels",
     def _ari_seeded(resolution: float, seed: int) -> tuple[float, float]:
         a = sc.read_h5ad(labeled_path)
         if "X_pca" not in a.obsm:
+            _ensure_log_normalized(a)
             sc.pp.pca(a, n_comps=min(50, a.n_vars - 1), random_state=seed)
         sc.pp.neighbors(a, random_state=seed)
         t = time.time()
@@ -130,6 +156,89 @@ def benchmark_full(labeled_path: str, label_key: str = "bulk_labels",
     logger.info("FULL BENCHMARK: {}", summary)
     return summary
 
+def prepare_pbmc12k(adata, resolution: float = 0.5, seed: int = 0):
+    """M1-contract preprocessing + clustering for the PBMC-12k (scvi-tools
+    pbmc_dataset, 9 types) labeled set — this is NOT Zheng68k, just stored under
+    that folder name historically.
+
+    Order matches src/pipeline/normalize.py + cluster.py exactly: normalize_total
+    -> log1p -> .raw frozen (full gene set, log-normalised) -> HVG subset -> scale
+    -> PCA -> neighbors -> Leiden. Guards against double-normalizing data that's
+    already log-scaled by checking adata.X.max() first.
+    """
+    import scanpy as sc
+
+    adata = adata.copy()
+    mx = float(adata.X.max())
+    print(f"[prepare_pbmc12k] pre-normalization adata.X.max() = {mx:.2f}")
+    if mx > 30:                                    # large, integer-ish -> raw counts
+        sc.pp.normalize_total(adata, target_sum=1e4)
+        sc.pp.log1p(adata)
+        logger.info("adata.X.max()={:.2f} -> raw counts detected; normalize_total + log1p applied", mx)
+    else:
+        logger.info("adata.X.max()={:.2f} -> already log-scaled; skipping normalize_total/log1p", mx)
+
+    sc.pp.highly_variable_genes(adata, n_top_genes=2000)
+    adata.raw = adata                              # set AFTER log1p, BEFORE HVG subset/scale (M1 contract)
+    adata = adata[:, adata.var.highly_variable].copy()
+    sc.pp.scale(adata, max_value=10)
+    sc.tl.pca(adata, n_comps=min(50, adata.n_vars - 1), random_state=seed)
+    sc.pp.neighbors(adata, n_pcs=min(50, adata.obsm["X_pca"].shape[1]), random_state=seed)
+    sc.tl.leiden(adata, resolution=resolution, flavor="igraph",
+                 n_iterations=2, directed=False, random_state=seed)
+    return adata
+
+
+def benchmark_accuracy_pbmc12k(
+    labeled_path: str = "data/raw/zheng68k/zheng68k_full.h5ad",
+    label_key: str = "str_labels",
+    out_dir: str = "benchmarks/results",
+    resolution: float = 0.5,
+) -> dict:
+    """TASK A: PBMC-12k (scvi-tools, 9 types) ARI, old (buggy, no normalize) vs
+    new (M1-contract corrected). Writes to a NEW file — never overwrites the
+    existing accuracy_benchmark.csv."""
+    import json
+    import scanpy as sc
+    from sklearn.metrics import adjusted_rand_score
+
+    a_raw = sc.read_h5ad(labeled_path)
+    if label_key not in a_raw.obs:
+        raise ValueError(f"'{label_key}' not in obs: {list(a_raw.obs.columns)}")
+
+    # --- OLD (buggy): load -> PCA/neighbors/leiden, NO normalize_total/log1p ---
+    a_old = a_raw.copy()
+    sc.pp.pca(a_old, n_comps=min(50, a_old.n_vars - 1), random_state=0)
+    sc.pp.neighbors(a_old, random_state=0)
+    sc.tl.leiden(a_old, resolution=resolution, flavor="igraph",
+                 n_iterations=2, directed=False, random_state=0)
+    ari_old = float(adjusted_rand_score(a_old.obs[label_key], a_old.obs["leiden"]))
+
+    # --- NEW (corrected): M1-contract order via prepare_pbmc12k ---
+    a_new = prepare_pbmc12k(a_raw, resolution=resolution, seed=0)
+    ari_new = float(adjusted_rand_score(a_new.obs[label_key], a_new.obs["leiden"]))
+
+    print(f"PBMC-12k ARI — OLD (no normalize): {ari_old:.4f} | NEW (M1-contract corrected): {ari_new:.4f}")
+    logger.info("PBMC-12k ARI — OLD: {:.4f}  NEW: {:.4f}", ari_old, ari_new)
+
+    out = Path(out_dir).resolve(); out.mkdir(parents=True, exist_ok=True)
+    result = {
+        "dataset": "PBMC-12k (scvi-tools pbmc_dataset, 9 types) -- NOT Zheng68k",
+        "labeled_path": labeled_path, "label_key": label_key,
+        "n_cells": int(a_raw.n_obs), "n_ground_truth_types": int(a_raw.obs[label_key].nunique()),
+        "resolution": resolution,
+        "ari_old_no_normalize": round(ari_old, 4),
+        "ari_new_m1_contract_corrected": round(ari_new, 4),
+        "target_ARI": 0.75,
+        "meets_target": ari_new >= 0.75,
+    }
+    out_path = out / "accuracy_benchmark_pbmc12k.json"   # NEW filename -- old CSV left untouched
+    with open(out_path, "w") as f:
+        json.dump(result, f, indent=2)
+    logger.info("Wrote {}", out_path)
+    return result
+
+
 def benchmark_accuracy(labeled_path: str = "data/raw/zheng68k/pbmc68k_reduced.h5ad",
                        label_key: str = "bulk_labels",
                        out_dir: str = "benchmarks/results") -> dict:
@@ -147,9 +256,9 @@ def benchmark_accuracy(labeled_path: str = "data/raw/zheng68k/pbmc68k_reduced.h5
     a = sc.read_h5ad(labeled_path)
     if label_key not in a.obs:
         raise ValueError(...)
-    # normalize like the real pipeline BEFORE clustering
-    sc.pp.normalize_total(a, target_sum=1e4)
-    sc.pp.log1p(a)
+    # normalize like the real pipeline BEFORE clustering — guarded so pre-normalized
+    # data (e.g. pbmc68k_reduced) isn't double-normalized
+    _ensure_log_normalized(a)
     sc.pp.highly_variable_genes(a, n_top_genes=2000)
     a = a[:, a.var.highly_variable]
     sc.pp.scale(a, max_value=10)

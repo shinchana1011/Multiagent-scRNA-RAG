@@ -1,0 +1,200 @@
+{
+  "dataset": "PBMC-12k (scvi-tools pbmc_dataset, 9 types) -- NOT Zheng68k",
+  "labeled_path": "data/raw/zheng68k/zheng68k_full.h5ad",
+  "label_key_chosen": "str_labels",
+  "obs_columns": [
+    "n_counts",
+    "batch",
+    "labels",
+    "str_labels",
+    "leiden",
+    "pred_cell_type",
+    "pred_confidence"
+  ],
+  "n_cells": 11990,
+  "resolution": 0.5,
+  "two_method_fallback": false,
+  "singler_error": null,
+  "cluster_annotations": {
+    "0": {
+      "cell_type": "T cell",
+      "confidence": "HIGH",
+      "raw_votes": {
+        "overlap": "CD4 T cell",
+        "kb2": "CD4 T cell",
+        "singler": "T_cells"
+      },
+      "marker_genes": [
+        "IL32",
+        "LTB",
+        "IL7R",
+        "CD2",
+        "CD3D"
+      ]
+    },
+    "1": {
+      "cell_type": "Platelet",
+      "confidence": "LOW",
+      "raw_votes": {
+        "overlap": "Unknown",
+        "kb2": "Platelet",
+        "singler": "T_cells"
+      },
+      "marker_genes": [
+        "RPL32",
+        "RPS15A",
+        "RPS12",
+        "RPS25",
+        "RPS27"
+      ]
+    },
+    "2": {
+      "cell_type": "Monocyte",
+      "confidence": "MED",
+      "raw_votes": {
+        "overlap": "CD14 Monocyte",
+        "kb2": "Dendritic cell",
+        "singler": "Monocyte"
+      },
+      "marker_genes": [
+        "S100A9",
+        "FCN1",
+        "TYROBP",
+        "S100A6",
+        "MNDA"
+      ]
+    },
+    "3": {
+      "cell_type": "T cell",
+      "confidence": "MED",
+      "raw_votes": {
+        "overlap": "CD4 T cell",
+        "kb2": "NK cell",
+        "singler": "T_cells"
+      },
+      "marker_genes": [
+        "NKG7",
+        "CST7",
+        "GZMA",
+        "IL32",
+        "CTSW"
+      ]
+    },
+    "4": {
+      "cell_type": "B cell",
+      "confidence": "HIGH",
+      "raw_votes": {
+        "overlap": "B cell",
+        "kb2": "B cell",
+        "singler": "B_cell"
+      },
+      "marker_genes": [
+        "CD79A",
+        "CD79B",
+        "CD74",
+        "CD37",
+        "HLA-DPB1"
+      ]
+    },
+    "5": {
+      "cell_type": "Dendritic cell",
+      "confidence": "LOW",
+      "raw_votes": {
+        "overlap": "Dendritic cell",
+        "kb2": "B cell",
+        "singler": "Monocyte"
+      },
+      "marker_genes": [
+        "FCER1A",
+        "HLA-DPB1",
+        "CST3",
+        "CD74",
+        "VIM"
+      ]
+    },
+    "6": {
+      "cell_type": "Dendritic cell",
+      "confidence": "LOW",
+      "raw_votes": {
+        "overlap": "Unknown",
+        "kb2": "Dendritic cell",
+        "singler": "Monocyte"
+      },
+      "marker_genes": [
+        "COTL1",
+        "FCER1G",
+        "S100A11",
+        "IFITM3",
+        "SPI1"
+      ]
+    },
+    "7": {
+      "cell_type": "NK cell",
+      "confidence": "HIGH",
+      "raw_votes": {
+        "overlap": "NK cell",
+        "kb2": "NK cell",
+        "singler": "NK_cell"
+      },
+      "marker_genes": [
+        "NKG7",
+        "CTSW",
+        "KLRF1",
+        "PRF1",
+        "GZMA"
+      ]
+    },
+    "8": {
+      "cell_type": "Platelet",
+      "confidence": "LOW",
+      "raw_votes": {
+        "overlap": "Unknown",
+        "kb2": "Platelet",
+        "singler": "GMP"
+      },
+      "marker_genes": [
+        "RPS24",
+        "IMPDH2",
+        "ALDH2",
+        "FLT3",
+        "LGALS9"
+      ]
+    },
+    "9": {
+      "cell_type": "NK cell",
+      "confidence": "LOW",
+      "raw_votes": {
+        "overlap": "Unknown",
+        "kb2": "NK cell",
+        "singler": "Pre-B_cell_CD34-"
+      },
+      "marker_genes": [
+        "GPX1",
+        "NPC2",
+        "SEC61B",
+        "VAMP8",
+        "IRF8"
+      ]
+    }
+  },
+  "predicted_labels": [
+    "B cell",
+    "Dendritic cell",
+    "Monocyte",
+    "NK cell",
+    "Platelet",
+    "T cell"
+  ],
+  "true_labels": [
+    "B cells",
+    "CD14+ Monocytes",
+    "CD4 T cells",
+    "CD8 T cells",
+    "Dendritic Cells",
+    "FCGR3A+ Monocytes",
+    "Megakaryocytes",
+    "NK cells",
+    "Other"
+  ],
+  "status": "STOPPED_AWAITING_CANON_MAPPING"
+}

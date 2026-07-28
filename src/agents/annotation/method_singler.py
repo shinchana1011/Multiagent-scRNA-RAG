@@ -4,9 +4,15 @@ import numpy as np
 from loguru import logger
 import os
 _R_BIN = r"C:\Program Files\R\R-4.6.1\bin\x64"
+_R_HOME = r"C:\Program Files\R\R-4.6.1"
 if os.path.exists(_R_BIN) and _R_BIN not in os.environ.get("PATH", ""):
     os.environ["PATH"] = _R_BIN + os.pathsep + os.environ["PATH"]
-    os.environ.setdefault("R_HOME", r"C:\Program Files\R\R-4.6.1")
+    # setdefault() is not enough: some machines have R_HOME set (wrongly) to the
+    # bin\x64 dir itself, which breaks rpy2 init. Only trust an existing R_HOME
+    # that isn't obviously that mistake.
+    _existing = os.environ.get("R_HOME", "").rstrip("\\/").lower()
+    if not _existing or _existing.endswith(("bin", "bin\\x64", "bin/x64")):
+        os.environ["R_HOME"] = _R_HOME
 
 
 def annotate_singler(adata) -> dict[str, str]:

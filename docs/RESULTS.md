@@ -29,18 +29,24 @@ without failure — **met**.
 | Dataset | Ground-truth types | Leiden clusters | ARI | Target | Result |
 |---|---|---|---|---|---|
 | Synthetic 3-cluster (plumbing test, `data/raw/zheng68k/synthetic_labeled.h5ad`) | 3 | 3 | 1.000 | ≥ 0.75 | code path verified, not a real benchmark |
-| Zheng68k (real, labeled) | — | — | — | ≥ 0.75 | **pending** — needs labeled Zheng68k download |
+| Zheng68k-reduced (scanpy `pbmc68k_reduced`, real Zheng et al. 2017 data, subsampled to 700 cells) | 10 | — | 0.4334 (no-RAG) / 0.5042 (RAG-on) | ≥ 0.75 | below target |
+| PBMC-12k (scvi-tools `pbmc_dataset`, 9 types, 11,990 cells — NOT Zheng68k) | 9 | — | 0.4176 (buggy, no normalize) / **0.7135** (M1-contract corrected) | ≥ 0.75 | below target, but close — see below |
+| Full raw Zheng68k (68k cells, FACS-purified labels) | — | — | — | ≥ 0.75 | **pending** — not available locally, needs manual download (no internet access in the dev environment); reduced/derivative datasets above are what's actually been run |
 
-The synthetic result only proves `benchmark_ari()` computes and reports
-correctly (cleanly-separated synthetic clusters recover perfectly, as
-expected). The real headline ARI number requires downloading the labeled
-Zheng68k dataset into `data/raw/zheng68k/zheng68k.h5ad` and re-running
-`python -m scripts.validate_pipeline1`.
+Two additional findings from later validation (see "Additional validation" below):
+1. The PBMC-12k number was originally computed with a bug: the benchmark went straight from
+   loading the h5ad to PCA/neighbors/Leiden with no `normalize_total`/`log1p` in between. Fixing
+   that raised ARI from 0.4176 to 0.7135 — most of the gap to the 0.75 target was the missing
+   normalization step, not a fundamental limitation of the clustering.
+2. The synthetic result only proves `benchmark_ari()` computes and reports correctly (cleanly
+   separated synthetic clusters recover perfectly, as expected) — still not a real benchmark.
 
 ## Open items
 
-- [ ] Download labeled Zheng68k, get the real ARI number
+- [ ] Get internet access or a manually-supplied file to download the full raw Zheng68k dataset
 - [ ] Investigate the C51/C52-dominated cluster in the COVID UMAP
+- [ ] Add bone-marrow/hematopoietic tissue coverage to KB-1 (currently only PBMC/lung/tumor/general
+      — see "Additional validation" below for why this matters)
 
 
 ## Member 2 — RAG Retrieval
@@ -74,7 +80,8 @@ Zheng68k dataset into `data/raw/zheng68k/zheng68k.h5ad` and re-running
   ## Member 3 — Verifier (three-check protocol)
 
 - Detects out-of-range values and uncited claims; verified claims promoted to HIGH.
-- Adversarial detection rate: 5/5 (100%) bad claims caught (NFR-06 target: >=90%).
+- Adversarial detection rate: 20/20 (100%) bad claims caught (NFR-06 target: >=90%;
+  see `tests/agents/test_verifier_adversarial.py`).
 
 ## Member 3 — Multi-agent orchestration (complete)
 - 5 agents (Data, Parameter, Verifier, Analysis, Annotation) wired via LangGraph StateGraph.
@@ -98,11 +105,56 @@ Zheng68k dataset into `data/raw/zheng68k/zheng68k.h5ad` and re-running
 - Full test suite green (state, agents, verifier, consensus, graph, cell-state).
 
 ## Member 4 - Benchmarks (complete)
-- RAG ablation (pbmc68k_reduced, 5 seeds): mean ARI 0.43 (off) -> 0.50 (on), +16%.
-- Wilcoxon signed-rank p = <value> (NFR-05).
-- Mean clustering runtime: <value> s.
+- RAG ablation (Zheng68k-reduced / scanpy `pbmc68k_reduced`, 20 seeds): mean ARI 0.4334 (off) ->
+  0.4985 (on), +15.0%.
+- Wilcoxon signed-rank p = 7.45e-05 (NFR-05). Originally run at n_seeds=5, which has a hard floor
+  of p=0.0625 for the exact two-sided test regardless of effect size — mathematically incapable of
+  reaching significance at that sample size. Re-run at n_seeds=20 to get a real result.
+- Mean clustering runtime: 0.05 s (Leiden step only, post-PCA/neighbors; see note in
+  "Additional validation" on the two different runtime definitions across benchmark functions).
 - UI: polished Streamlit dashboard (FR-24) with live status, confidence colour-coding,
   composition profiling, and human-review queue (FR-17).
 - Integration testing, performance testing; scope limited to the scope given in docs/TESTING.md
 - Docker containerization using Podman
 - Github CI/CD Actions
+
+## Additional validation (post-completion hardening)
+
+- **Benchmark normalization bug fixed**: `benchmark_accuracy()` and the RAG-ablation cluster
+  helpers went straight from `sc.read_h5ad` to PCA/neighbors/Leiden with no
+  `normalize_total`/`log1p` in between when a dataset's PCA wasn't already precomputed. Added
+  `_ensure_log_normalized()` / `prepare_pbmc12k()` (`src/benchmarks/run_benchmarks.py`), which
+  decides from `adata.X.max()` whether data is raw counts or already log-scaled, so it neither
+  skips normalization on raw data nor double-normalizes already-processed data.
+- **PBMC-12k (scvi-tools, 9 types, 11,990 cells — not Zheng68k) ARI**: 0.4176 (buggy) -> 0.7135
+  (corrected). Written to `benchmarks/results/accuracy_benchmark_pbmc12k.json`.
+- **Gene-ID mismatch fixed**: the PBMC-12k set's `var_names` are Ensembl IDs (`ENSG...`), which
+  silently broke all three annotation methods (marker-overlap panel and SingleR/celldex reference
+  are keyed on gene symbols; KB-2's embedding query on Ensembl-ID text degenerated to a single
+  arbitrary nearest match). Fixed via `src/pipeline/gene_ids.py`, remapping using a vendored,
+  offline, 100%-matching Ensembl->symbol table extracted from the 10x CellRanger GRCh38 reference
+  already in this repo (`data/pbmc4k/filtered_gene_bc_matrices.tar.gz`) — not fetched or guessed.
+- **Consensus scoring bug fixed**: `score_consensus()` reported HIGH confidence whenever exactly
+  one of three methods produced a vote (trivially "unanimous" at n=1). Now requires >=2 valid votes
+  for HIGH/MED; fewer forces LOW. See `src/agents/annotation/consensus.py` and the updated
+  `tests/agents/test_consensus.py`.
+- **R_HOME auto-detection fixed**: `method_singler.py` used `os.environ.setdefault("R_HOME", ...)`,
+  which can't correct an already-wrong R_HOME (this dev machine had it pointing at R's `bin\x64`
+  instead of the R root, breaking rpy2 init entirely). Now detects and corrects that specific
+  mistake instead of trusting-or-ignoring whatever's already set.
+- **Lineage-level annotation calibration** (PBMC-12k, 3-method consensus, human-confirmed
+  CANON mapping — see `benchmarks/results/calibration_pbmc12k.json`): confidence rank-orders
+  accuracy (HIGH 96.5%, MED 92.3%, LOW 7.5%; per-cell Wilson 95% CIs for HIGH/LOW don't overlap).
+  This is framed as an ordinal rank-order finding, not a probabilistic calibration claim, since
+  `score_consensus` emits categorical HIGH/MED/LOW, not numeric probabilities (ECE is reported only
+  as an appendix number under an explicitly assumed nominal-confidence mapping). A cluster-level
+  bootstrap (resampling clusters, not cells, 1000 iterations) confirms the rank order survives
+  accounting for pseudoreplication, though with much wider CIs (only 3 HIGH / 2 MED / 5 LOW
+  clusters total). Cells with no true-lineage analog ("Other") land in HIGH confidence 22.5% of
+  the time — a genuine miscalibration finding, not a mapping artifact.
+- **RAG ablation across three datasets**, not one (`benchmarks/results/rag_ablation_3datasets.md`):
+  Zheng68k-reduced +16.3%, PBMC-12k +0.8%, Paul15 (myeloid progenitors) **-26.0%**. The Paul15
+  result is a known limitation, not a bug: KB-1's corpus only tags {PBMC, lung, tumor, general}
+  tissue, so a bone-marrow query fell back to a tissue-mismatched ('tumor') citation that the
+  Verifier would reject in the real pipeline. Demonstrates RAG's benefit is contingent on corpus
+  tissue coverage, which doesn't yet include bone-marrow/hematopoietic literature.

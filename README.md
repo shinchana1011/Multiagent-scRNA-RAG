@@ -27,26 +27,31 @@ methods to produce confidence-scored, reviewable output.
 | Member 3 | Multi-agent system, verification, 3-method annotation, LangGraph orchestration | ✅ Complete |
 | Member 4 | FastAPI backend, Streamlit UI, report generation, benchmarks, CI, containerization | ✅ Complete |
 
-Runs end-to-end on PBMC3k, Paul15, and multi-batch COVID (GSE145926). 62 tests passing locally;
+Runs end-to-end on PBMC3k, Paul15, and multi-batch COVID (GSE145926). 63 tests passing locally;
 CI validates environment-independent components on every push.
 
 ---
 
 ## Architecture
-Streamlit UI  ──►  FastAPI backend  ──►  LangGraph orchestrator
-│
-┌─────────────────────────────────────┼─────────────────────────────┐
-Data Agent   Parameter Agent   Verifier Agent   Analysis Agent   Annotation Agent
-│             │                │               │                  │
-load/validate  RAG (KB-1)     3-check verify   Scanpy pipeline   3-method consensus
-(SingleR + marker
-overlap + KB-2)
-│
-Report generation
-(UMAP · Methods · citations · scorecard · composition)
 
-Single entry point: `run_pipeline(input_path, tissue, disease)` → dict with
-`config, claims, annotations, log, adata, error`.
+```text
+   Streamlit UI  ──►  FastAPI backend  ──►  LangGraph orchestrator
+                                                    │
+        ┌───────────────┬───────────────┬──────────┴────┬──────────────────┐
+        ▼               ▼               ▼               ▼                  ▼
+   Data Agent    Parameter Agent   Verifier Agent  Analysis Agent   Annotation Agent
+        │               │               │               │                  │
+   load/validate     RAG (KB-1)     3-check verify  Scanpy pipeline   3-method consensus
+                                                                      (SingleR + marker
+                                                                       overlap + KB-2)
+                                                    │
+                                                    ▼
+                                            Report generation
+                          (UMAP · Methods · citations · scorecard · composition)
+```
+
+**Single entry point:** `run_pipeline(input_path, tissue, disease)` → dict with
+`config`, `claims`, `annotations`, `log`, `adata`, `error`.
 
 ---
 
@@ -62,33 +67,36 @@ Single entry point: `run_pipeline(input_path, tissue, disease)` → dict with
 ---
 
 ## Repository structure
+
+```text
 Multiagent-scRNA-RAG/
-├── .github/workflows/ci.yml    # CI (environment-independent tests)
-├── .streamlit/config.toml      # UI config (upload size)
-├── benchmarks/results/         # ARI / runtime / ablation outputs
+├── .github/workflows/ci.yml     # CI (environment-independent tests)
+├── .streamlit/config.toml       # UI config (upload size)
+├── benchmarks/results/          # ARI / runtime / ablation outputs
 ├── data/
-│   ├── kb/                     # KB-1 (FAISS) + KB-2 (ChromaDB) + corpus
-│   ├── raw/                    # datasets (gitignored)
-│   └── uploads/                # UI uploads (gitignored)
-├── docker/                     # Dockerfile, Dockerfile.lite, docker-compose.yml
-├── docs/                       # CONTRACT.md, MANUAL_TESTING.md, TESTING.md, agent_dag.png
-├── requirements/               # base / app / agents / rag / pipeline / dev
+│   ├── kb/                      # KB-1 (FAISS) + KB-2 (ChromaDB) + corpus
+│   ├── raw/                     # datasets (gitignored)
+│   └── uploads/                 # UI uploads (gitignored)
+├── docker/                      # Dockerfile, Dockerfile.lite, docker-compose.yml
+├── docs/                        # CONTRACT.md, MANUAL_TESTING.md, TESTING.md, agent_dag.png
+├── requirements/                # base / app / agents / rag / pipeline / dev
 ├── src/
-│   ├── io/                     # readers + validation           [Member 1]
-│   ├── pipeline/               # QC, normalize, reduce, cluster, markers, runner  [Member 1]
-│   ├── plots/                  # figures                          [Member 1]
-│   ├── rag/                    # retriever, recommender, LLM extractor  [Member 2]
-│   ├── knowledge_base/         # KB-1 / KB-2 stores               [Member 2]
-│   ├── agents/                 # data, parameter, verifier, analysis, annotation  [Member 3]
-│   ├── orchestrator/           # LangGraph graph + run_pipeline   [Member 3]
-│   ├── schemas/                # PipelineConfig, PipelineState     [Member 1/3]
-│   ├── api/                    # FastAPI backend + adapters        [Member 4]
-│   ├── ui/                     # Streamlit dashboard               [Member 4]
-│   ├── reporting/              # figures, methods, citations, scorecard, composition  [Member 4]
-│   ├── config/                 # settings + logging                [Member 4]
-│   └── benchmarks/             # ARI / runtime / ablation          [Member 4]
-├── tests/                      # 62 tests (unit, integration, API, reporting, failure)
-└── runs/                       # per-job outputs (gitignored)
+│   ├── io/                      # readers + validation                        [Member 1]
+│   ├── pipeline/                # QC, normalize, reduce, cluster, markers      [Member 1]
+│   ├── plots/                   # figures                                     [Member 1]
+│   ├── rag/                     # retriever, recommender, LLM extractor        [Member 2]
+│   ├── knowledge_base/          # KB-1 / KB-2 stores                          [Member 2]
+│   ├── agents/                  # data, parameter, verifier, analysis, annot.  [Member 3]
+│   ├── orchestrator/            # LangGraph graph + run_pipeline               [Member 3]
+│   ├── schemas/                 # PipelineConfig, PipelineState              [Member 1/3]
+│   ├── api/                     # FastAPI backend + adapters                   [Member 4]
+│   ├── ui/                      # Streamlit dashboard                          [Member 4]
+│   ├── reporting/               # figures, methods, citations, scorecard       [Member 4]
+│   ├── config/                  # settings + logging                          [Member 4]
+│   └── benchmarks/              # ARI / runtime / ablation                     [Member 4]
+├── tests/                       # 62 tests (unit, integration, API, reporting)
+└── runs/                        # per-job outputs (gitignored)
+```
 
 ---
 
@@ -176,18 +184,23 @@ Two images: `Dockerfile.lite` (Python-only, 2-method consensus, fast) and `Docke
 
 | Metric | Result | Notes |
 |---|---|---|
-| RAG ablation (ARI) | 0.43 → 0.50 (+16%) | RAG-off vs RAG-on, pbmc68k_reduced |
+| RAG ablation (ARI) | 0.4334 → 0.4985 (+15.0%, p=7.45e-05) | RAG-off vs RAG-on, Zheng68k-reduced (scanpy `pbmc68k_reduced`), 20 seeds |
+| RAG ablation, 3 datasets | +16.3% / +0.8% / -26.0% | Zheng68k-reduced / PBMC-12k / Paul15 — see `benchmarks/results/rag_ablation_3datasets.md`; Paul15's regression is a KB-1 tissue-coverage gap (bone marrow), not a defect — flagged there |
 | Verifier detection | 100% (20/20) | adversarial citation set (NFR-06) |
 | Retry recovery | 100% (4/4) | simulated agent failures (FR-25) |
 | Batch mixing (iLISI) | 2.21 | COVID GSE145926 (> 1.5 target) |
-| Retrieval accuracy | 83% top-1 | tissue-matched parameter retrieval |
-| Annotation ARI | 0.43 | pbmc68k_reduced subset; below 0.75 target — see below |
+| Retrieval accuracy | 83% top-1 | tissue-matched parameter retrieval (small n=6 query set) |
+| Annotation ARI | 0.4347 (Zheng68k-reduced) / **0.7135** (PBMC-12k, corrected) | both below 0.75 target — see below |
+| Confidence rank-ordering | HIGH 96.5% / MED 92.3% / LOW 7.5% accuracy | lineage-level, PBMC-12k, 3-method consensus; per-cell and cluster-bootstrap CIs both confirm the rank order — see `benchmarks/results/calibration_pbmc12k.json` |
 
-**Honest limitations:** The FR-15 accuracy target (ARI ≥ 0.75 / accuracy ≥ 80%) was evaluated on the
-700-cell `pbmc68k_reduced` benchmark subset and came in below target — Zheng68k is a known-difficult
-benchmark (imbalanced, molecularly similar populations); full-scale raw Zheng68k validation is future
-work. Expert biological validation (Cohen's κ) is documented as future work; the human-review queue
-provides the operational review UI in its place.
+**Honest limitations:** The FR-15 accuracy target (ARI ≥ 0.75 / accuracy ≥ 80%) was evaluated on
+Zheng68k-reduced (0.4347) and on PBMC-12k (0.7135, after fixing a benchmark normalization bug that
+had it artificially low at 0.4176) — both below target, though PBMC-12k is close. Full-scale raw
+Zheng68k (68k cells, FACS-purified labels) is not available locally and needs a manual download;
+that validation remains future work. Expert biological validation (Cohen's κ) is documented as
+future work; the human-review queue provides the operational review UI in its place. KB-1's tissue
+coverage is currently {PBMC, lung, tumor, general} only — bone-marrow/hematopoietic literature is
+absent, which measurably hurts RAG's benefit on non-PBMC tissue (see the 3-dataset ablation above).
 
 ---
 

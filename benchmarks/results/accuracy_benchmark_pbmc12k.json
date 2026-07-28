@@ -1,0 +1,12 @@
+{
+  "dataset": "PBMC-12k (scvi-tools pbmc_dataset, 9 types) -- NOT Zheng68k",
+  "labeled_path": "data/raw/zheng68k/zheng68k_full.h5ad",
+  "label_key": "str_labels",
+  "n_cells": 11990,
+  "n_ground_truth_types": 9,
+  "resolution": 0.5,
+  "ari_old_no_normalize": 0.4176,
+  "ari_new_m1_contract_corrected": 0.7135,
+  "target_ARI": 0.75,
+  "meets_target": false
+}
