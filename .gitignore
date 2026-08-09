@@ -4,3 +4,4 @@ data/processed/
 __pycache__/
 *.pyc
 .pytest_cache/
+data/kb/kb2/
