@@ -25,9 +25,9 @@ verifiable output.
 | Stream | Component | Status |
 |---|---|---|
 | **Member 1** | Bioinformatics pipeline (ingestion → QC → norm → PCA/Harmony → Leiden → UMAP → markers) | ✅ **Working end-to-end** |
-| Member 2 | RAG knowledge base (KB-1 / KB-2) + parameter retrieval | 🚧 In progress |
-| Member 3 | Multi-agent system, verification, annotation, orchestration | 🚧 In progress |
-| Member 4 | FastAPI backend, Streamlit UI, report generation, Docker/CI | 🚧 In progress |
+| Member 2 | RAG knowledge base (KB-1 / KB-2) + parameter retrieval | ✅ **Working end-to-end**  |
+| Member 3 | Multi-agent system, verification, annotation, orchestration | ✅ **Working end-to-end**  |
+| Member 4 | FastAPI backend, Streamlit UI, report generation, Docker/CI | ✅ **Working end-to-end** |
 
 The analysis pipeline runs today on PBMC3k and the multi-batch COVID (GSE145926) dataset.
 The RAG, agent-orchestration, and UI layers are under active development.
