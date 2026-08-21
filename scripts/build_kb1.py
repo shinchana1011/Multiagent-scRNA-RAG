@@ -5,7 +5,7 @@ from src.knowledge_base.vector_store import VectorStore
 
 
 def build() -> None:
-    docs = load_seed_corpus()
+    docs = load_seed_corpus("data/kb/corpus.jsonl")
     chunks: list[dict] = []
     for d in docs:
         for piece in chunk_text(d["text"]):

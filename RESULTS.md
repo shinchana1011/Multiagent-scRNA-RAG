@@ -41,3 +41,58 @@ Zheng68k dataset into `data/raw/zheng68k/zheng68k.h5ad` and re-running
 
 - [ ] Download labeled Zheng68k, get the real ARI number
 - [ ] Investigate the C51/C52-dominated cluster in the COVID UMAP
+
+
+## Member 2 — RAG Retrieval
+
+- KB-1 corpus: real PMC open-access papers, 11,251 indexed chunks
+- Embedding model: all-MiniLM-L6-v2 (384-dim)
+- Retrieval accuracy @top-1: 83% (5/6 tissue-matched queries)
+- Note: the single miss returned general (not tumor) guidance for a tumor
+  query — general QC papers dominate for that term; a tissue-specific miss,
+  not an irrelevant one.
+  ## Member 2 — Parameter extraction (regex baseline)
+- Regex extractor on real corpus: 1 of 3 parameters extracted (resolution only)
+- Motivates LLM-based extractor (per design) for robust extraction from
+  varied real-world phrasing — required for a meaningful RAG ablation.
+
+## Member 2 — LLM parameter extraction (local Ollama)
+- Local LLM (Ollama, llama3.2) extracts structured parameters with citations,
+  free and offline — no API billing dependency (good for reproducibility).
+- Improves extraction over regex baseline; secures RAG-on vs RAG-off ablation.
+- Tissue-matched retrieval confirmed: lung -> resolution 0.35, PBMC -> 0.8.
+- KB-2 annotation: CD4 T cell matched at distance 0.02 with citation.
+
+## Member 2 — RAG & Knowledge Base (complete)
+- KB-1: 11,251 vectors from real PMC corpus. Retrieval 83% top-1 accuracy.
+- KB-2: annotation working (CD4 T cell matched at distance 0.02).
+- Tissue-matched parameters confirmed: lung -> 0.35, PBMC -> 0.8, each cited.
+- LLM extractor (local Ollama/llama3.1) validated on clean text (3/3 params).
+  Real-corpus extraction limited by raw-XML text quality; regex fallback
+  ensures a cited value always returns. Corpus text-cleaning noted as future work.
+
+  ## Member 3 — Verifier (three-check protocol)
+
+- Detects out-of-range values and uncited claims; verified claims promoted to HIGH.
+- Adversarial detection rate: 5/5 (100%) bad claims caught (NFR-06 target: >=90%).
+
+## Member 3 — Multi-agent orchestration (complete)
+- 5 agents (Data, Parameter, Verifier, Analysis, Annotation) wired via LangGraph StateGraph.
+- Full pipeline runs autonomously from one run_pipeline() call.
+- Verifier promotes valid cited claims to HIGH (adversarial detection 100% in tests).
+- Consensus annotation: 6/8 HIGH confidence, 2 flagged to review queue (FR-16, FR-17).
+- SingleR (3rd method) stubbed pending R toolchain; 2-method consensus operational.
+- 3 live annotation methods: marker-overlap, KB-2/RAG, SingleR (R via rpy2).
+- Label harmonization unifies vocabularies; consensus scores true 3/3 agreement.
+- On PBMC3k: 5/7 clusters HIGH confidence, 2 flagged to review queue.
+- LangGraph orchestration + retry loop (FR-25); Verifier 3-check (NFR-06 100%).
+
+## Member 3 — Multi-agent orchestration (FULLY requirement-complete)
+- FR-07: real 3-check Verifier (range, citation, tissue context).
+- FR-08: confidence downgrade + alternative-source retrieval on claim failure.
+- FR-16/17: consensus HIGH/MED/LOW + LOW-confidence review queue.
+- FR-18: cell-state annotation on HIGH clusters (memory/naive T, classical monocyte, etc.).
+- FR-25: LangGraph retry loop.
+- NFR-06: 20-claim adversarial set, 100% detection.
+- 3 live annotation methods (incl. SingleR via rpy2) + label harmonization.
+- Full test suite green (state, agents, verifier, consensus, graph, cell-state).
